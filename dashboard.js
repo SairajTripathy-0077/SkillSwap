@@ -49,10 +49,9 @@ const notificationBell = document.getElementById('notificationBell');
 const requestSwapButton = document.getElementById('requestSwapButton');
 
 const swappedUsersButton = document.getElementById('swappedUsersButton'); 
-const userListContainer = document.getElementById('userListContainer'); 
 const userListSection = document.getElementById('userListSection'); 
 
-// --- NEW: Dropdown Elements ---
+// --- Dropdown Elements ---
 const swappedUsersDropdownMenu = document.getElementById('swappedUsersDropdownMenu');
 
 
@@ -314,22 +313,20 @@ function toggleSwappedUsersDropdown(currentUserId) {
  * Loads and renders users with an accepted swap status directly into the dropdown menu.
  */
 function loadSwappedUsersForDropdown(currentUserId) {
+    // Show loading state immediately
+    swappedUsersDropdownMenu.innerHTML = `
+        <div class="px-4 py-2 text-sm font-semibold text-gray-800 border-b">Active Swaps</div>
+        <div id="swappedDropdownLoading" class="flex items-center px-4 py-2 text-sm text-gray-500">
+            <i class="fas fa-spinner fa-spin mr-2"></i> Fetching swaps...
+        </div>
+    `;
+
     // Path to the PUBLIC user directory
     const usersCollectionRef = collection(db, `artifacts/${appId}/public/data/user_directory`);
     const q = query(usersCollectionRef);
 
-    // Initial render of loading state (Assuming HTML has swappedDropdownLoading)
-    const loadingDiv = document.getElementById('swappedDropdownLoading');
-    if (loadingDiv) loadingDiv.classList.remove('hidden');
-
     onSnapshot(q, async (snapshot) => {
-        
-        // Hide loading state now that data is processing
-        const currentLoadingDiv = document.getElementById('swappedDropdownLoading');
-        if (currentLoadingDiv) currentLoadingDiv.classList.add('hidden');
-        
-        // Clear container but keep header
-        swappedUsersDropdownMenu.innerHTML = '<div class="px-4 py-2 text-sm font-semibold text-gray-800 border-b">Active Swaps</div>'; 
+        swappedUsersDropdownMenu.innerHTML = `<div class="px-4 py-2 text-sm font-semibold text-gray-800 border-b">Active Swaps</div>`; // Clear previous list but keep header
         
         const swappedUsers = [];
         // 1. Filter and identify swapped users
@@ -352,33 +349,95 @@ function loadSwappedUsersForDropdown(currentUserId) {
         }
 
         swappedUsersDropdownMenu.innerHTML += swappedUsers.map(user => `
-            <button data-userid="${user.id}" class="dropdown-profile-button flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition">
+            <button data-userid="${user.id}" data-action="view" class="dropdown-profile-button flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition">
                 <i class="fas fa-handshake text-secondary-500 mr-3"></i>
                 ${user.firstName} ${user.lastName}
+                <i data-palid="${user.id}" data-action="remove" class="remove-swap-btn fas fa-minus-circle text-error-red-600 ml-auto hover:text-red-800"></i>
             </button>
         `).join('');
 
         // 3. Add click listeners to open the user profile modal
         document.querySelectorAll('.dropdown-profile-button').forEach(button => {
             button.addEventListener('click', (e) => {
-                e.stopPropagation(); // Stop click from immediately closing modal
-                showUserProfile(button.dataset.userid);
-                swappedUsersDropdownMenu.classList.add('hidden'); // Close dropdown after selection
+                e.stopPropagation(); // Stop click from immediately closing dropdown
+                // Only process if the click wasn't on the remove button
+                if (!e.target.classList.contains('remove-swap-btn')) {
+                    showUserProfile(button.dataset.userid);
+                    if (swappedUsersDropdownMenu) swappedUsersDropdownMenu.classList.add('hidden'); // Close dropdown after selection
+                }
+            });
+        });
+        
+        // 4. Add listener for the new REMOVE button
+        document.querySelectorAll('.remove-swap-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const palId = e.target.dataset.palid;
+                // Confirm action before removal
+                if (confirm(`Are you sure you want to remove ${usersDirectory[palId].firstName} ${usersDirectory[palId].lastName} from your swapped list?`)) {
+                    handleRemoveSwap(palId);
+                }
             });
         });
 
+
     }, (error) => {
         console.error("Error loading swapped users:", error);
-        swappedUsersDropdownMenu.innerHTML = `<div class="px-4 py-2 text-sm text-red-500">Could not load list.</div>`;
+        swappedUsersDropdownMenu.innerHTML += `<div class="px-4 py-2 text-sm text-red-500">Could not load list.</div>`;
     });
 }
 
 
-// --- View Toggle Logic (Simplified) ---
+/**
+ * NEW FUNCTION: Removes an accepted swap relationship by setting status to 'removed'.
+ */
+async function handleRemoveSwap(palId) {
+    if (!currentUserId || !palId) return;
+
+    // Find the ACCEPTED request between the two users
+    const requestsCollectionRef = collection(db, `artifacts/${appId}/public/data/swap_requests`);
+    
+    // Query for the accepted document where either user is the sender/receiver
+    const q = query(
+        requestsCollectionRef,
+        where("status", "==", "accepted"),
+        where("senderId", "in", [currentUserId, palId]),
+        where("receiverId", "in", [currentUserId, palId])
+    );
+
+    try {
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) {
+            console.warn("No accepted swap found to remove.");
+            alert("No active swap connection found to remove.");
+            return;
+        }
+
+        // We only expect one document to match
+        const docToUpdate = snapshot.docs[0]; 
+        
+        await updateDoc(docToUpdate.ref, {
+            status: 'removed', // Set status to 'removed'
+            removedBy: currentUserId, // Optional: log who removed it
+            removedAt: serverTimestamp()
+        });
+
+        alert("Swap connection successfully removed.");
+        // The onSnapshot listener will automatically refresh the dropdown and the main user list.
+
+    } catch (error) {
+        console.error("Error removing swap connection:", error);
+        alert("Error removing swap connection. Please try again.");
+    }
+}
+
+// --- The rest of the dashboard.js file follows (Request Swap, User List, Modals, etc.) ---
+
+// --- View Toggle Logic (Simplified/Removed) ---
 
 function toggleView(view) {
-    // This function ensures the main list is always visible as the dropdown is separate
-    userListSection.classList.remove('hidden'); 
+    // This function is now simplified since the list is in the dropdown
+    userListSection.classList.remove('hidden'); // Always show the main list
 }
 
 
@@ -487,11 +546,18 @@ function loadUserDirectory(currentUserId) {
                 ? `<span class="ml-auto px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">Swapped</span>`
                 : '';
 
+            // Render primary skill
+            const skills = user.skillsOffering || [];
+            const primarySkill = skills.length > 0 ? `<p class="text-xs text-gray-500 mt-1">Offers: ${skills[0]}</p>` : '';
+
             return `
-                <button data-userid="${user.id}" class="user-profile-button w-full text-left p-4 bg-white hover:bg-gray-50 rounded-lg shadow transition duration-150 flex items-center space-x-3">
-                    <i class="fas fa-user-circle text-gray-400 text-2xl"></i>
-                    <span class="font-medium text-lg text-primary-600">${user.firstName} ${user.lastName}</span>
-                    ${statusBadge}
+                <button data-userid="${user.id}" class="user-profile-button w-full text-left p-4 bg-white hover:bg-gray-50 rounded-lg shadow transition duration-150 flex flex-col items-start space-y-1">
+                    <div class="flex w-full items-center">
+                        <i class="fas fa-user-circle text-gray-400 text-2xl mr-3"></i>
+                        <span class="font-medium text-lg text-primary-600">${user.firstName} ${user.lastName}</span>
+                        ${statusBadge}
+                    </div>
+                    ${primarySkill}
                 </button>
             `;
         });
@@ -600,7 +666,7 @@ async function showUserProfile(userId) {
         renderSkillsToModal(skillOfferEl, publicData.skillsOffering, 'offering');
         renderSkillsToModal(skillSeekEl, publicData.skillsSeeking, 'seeking');
 
-        // --- NEW: Check if already swapped ---
+        // --- Check if already swapped or pending ---
         const isSwapped = await checkSwapStatus(userId);
         
         if (isSwapped) {
@@ -608,7 +674,7 @@ async function showUserProfile(userId) {
                 requestSwapButton.classList.add('hidden'); // Hide the button
                 showRequestMessage("You have successfully exchanged skills with this user. Swapped!", false);
             }
-            return; // Stop processing further checks like pending requests
+            return; 
         }
 
         // 4. Check if a pending request already exists to disable the button
@@ -700,7 +766,6 @@ function setupModalClose() {
         // Close dropdown when clicking outside
         document.body.addEventListener('click', (e) => {
             if (swappedUsersDropdownMenu && !swappedUsersDropdownMenu.classList.contains('hidden')) {
-                // Use a general check that targets the button or the menu itself
                 if (!swappedUsersButton.contains(e.target) && !swappedUsersDropdownMenu.contains(e.target)) {
                     swappedUsersDropdownMenu.classList.add('hidden');
                 }

@@ -74,16 +74,6 @@
         }
         /* --- END Skill Pill Styles --- */
         
-        /* New Styles for inline skill tags on user cards */
-        .card-skill-tag {
-            font-size: 0.75rem; /* text-xs */
-            padding: 2px 6px;
-            border-radius: 4px;
-            background-color: #e5e7eb; /* gray-200 */
-            color: #374151; /* gray-700 */
-            margin-right: 4px;
-        }
-
         /* Custom scrollbar for better look */
         .max-h-\[60vh\]::-webkit-scrollbar {
             width: 8px;
@@ -118,23 +108,23 @@
                         </button>
                     </div>
 
-                    <!-- Swapped Users Button (NEW Dropdown Structure) -->
+                    <!-- Swapped Users Button (NEW Dropdown Toggle) -->
                     <div class="relative">
                         <button id="swappedUsersButton" class="p-2 text-gray-600 hover:text-secondary-500 transition duration-150 relative">
                             <i class="fas fa-users text-xl"></i>
                         </button>
-                        
+
                         <!-- Swapped Users Dropdown Menu -->
                         <div id="swappedUsersDropdownMenu" class="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-40 hidden max-h-72 overflow-y-auto">
-                            <!-- Swapped user list injected here by dashboard.js -->
                             <div class="px-4 py-2 text-sm font-semibold text-gray-800 border-b">Active Swaps</div>
-                            
-                            <!-- Loading State for smoother transitions -->
+                            <!-- Loading State injected here, and removed once content is ready -->
                             <div id="swappedDropdownLoading" class="flex items-center px-4 py-2 text-sm text-gray-500">
                                 <i class="fas fa-spinner fa-spin mr-2"></i> Fetching swaps...
                             </div>
                         </div>
                     </div>
+                    <!-- End Swapped Users Dropdown -->
+
 
                     <!-- Link to Profile Page -->
                     <a href="homepage.html"class="p-2 text-gray-600 hover:text-primary-500 transition duration-150 rounded-full">
@@ -165,7 +155,7 @@
                 <!-- Content injected by dashboard.js (Pending Requests) -->
             </div>
 
-            <!-- User List Section (Default View) -->
+            <!-- User List Section (Default View - All Users) -->
             <div id="userListSection" class="bg-white rounded-lg shadow-xl overflow-hidden">
                 <div class="p-6 border-b border-gray-200">
                     <h2 class="text-2xl font-semibold text-gray-800">All Other Users</h2>
@@ -182,7 +172,7 @@
 
     <!-- 
     ================================================================
-    User Profile Modal
+    User Profile Modal (Used for viewing other user profiles)
     ================================================================
     -->
     <div id="userModalBackdrop" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-40 hidden"></div>
