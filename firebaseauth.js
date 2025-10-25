@@ -1,142 +1,173 @@
- // Import the functions you need from the SDKs you need
- import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
- import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
- import { getFirestore, setDoc, doc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { 
+    getAuth, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword 
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { 
+    getFirestore, 
+    setDoc, 
+    doc,
+    setLogLevel
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
- // --- Use your specific Firebase Config ---
- const firebaseConfig = {
+// --- Your specific Firebase Config ---
+const firebaseConfig = {
     apiKey: "AIzaSyAwZ7MACRLX0fW1l65q4xRo95iTGj7fDkw",
     authDomain: "login-page-75c91.firebaseapp.com",
     projectId: "login-page-75c91",
     storageBucket: "login-page-75c91.firebasestorage.app",
     messagingSenderId: "31726323937",
     appId: "1:31726323937:web:9ef8c5eb0a0aec6204cfa0"
- };
+};
 
- // Initialize Firebase
- const app = initializeApp(firebaseConfig);
- const auth = getAuth(app);
- const db = getFirestore(app);
- setLogLevel('Debug'); // Enable Firebase logging
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+setLogLevel('Debug'); // Enable Firebase logging
 
- // This is a fallback app ID. In a real environment, this would be injected.
- // For your hardcoded config, we can just use your project ID.
- const appId = firebaseConfig.projectId || 'default-app-id';
+// Get the app ID (project ID in this case) for the DB path
+const appId = firebaseConfig.projectId || 'default-app-id';
+
 
 /**
- * Displays a message to the user in a specified div.
- * This version uses the Tailwind classes from index.html for styling.
- * @param {string} message The message to display.
- * @param {string} divId The ID of the element to show the message in.
- * @param {boolean} [isError=true] Whether the message is an error (red) or success (green).
+ * Helper function to show success/error messages in the form.
  */
- function showMessage(message, divId, isError = true) {
+function showMessage(message, divId) {
     var messageDiv = document.getElementById(divId);
-    if (!messageDiv) {
-        console.error("Message div not found:", divId);
-        return;
-    }
-    
-    // Set style based on error or success
-    messageDiv.innerText = message;
-    messageDiv.className = 'messageDiv'; // Reset classes
-    if (isError) {
-        messageDiv.classList.add('bg-red-100', 'text-red-700');
+    if (!messageDiv) return; // Guard clause
+
+    // Determine if it's an error message
+    if (message.toLowerCase().includes('error') || 
+        message.toLowerCase().includes('incorrect') || 
+        message.toLowerCase().includes('invalid') ||
+        message.toLowerCase().includes('exists')) {
+        messageDiv.className = "messageDiv bg-red-100 text-red-700 block";
     } else {
-        messageDiv.classList.add('bg-green-100', 'text-green-700');
+        messageDiv.className = "messageDiv bg-green-100 text-green-700 block";
     }
 
-    messageDiv.classList.remove('hidden');
+    messageDiv.innerHTML = message;
     messageDiv.style.opacity = 1;
-    
-    setTimeout(function(){
+    setTimeout(function () {
         messageDiv.style.opacity = 0;
-        setTimeout(() => messageDiv.classList.add('hidden'), 500); // Hide after fade
-    }, 5000);
- }
- 
- const signUp=document.getElementById('submitSignUp');
- if (signUp) {
-    signUp.addEventListener('click', (event)=>{
-        event.preventDefault();
-        const email=document.getElementById('rEmail').value;
-        const password=document.getElementById('rPassword').value;
-        const firstName=document.getElementById('fName').value;
-        const lastName=document.getElementById('lName').value;
-        const bio = document.getElementById('rBio').value;
-
-        if (!firstName || !lastName || !email || !password || !bio) {
-             showMessage('Please fill out all fields.', 'signUpMessage', true);
-             return;
-        }
-
-        createUserWithEmailAndPassword(auth, email, password)
-        .then((userCredential)=>{
-            const user=userCredential.user;
-            
-            const userData={
-                email: email,
-                firstName: firstName,
-                lastName:lastName,
-                bio: bio, 
-                createdAt: new Date().toISOString()
-            };
-            
-            showMessage('Account Created Successfully! Redirecting...', 'signUpMessage', false);
-            
-            // Use a structured path. Using `appId` here for consistency.
-            const docRef=doc(db, `artifacts/${appId}/users/${user.uid}/profile/info`);
-            
-            setDoc(docRef,userData)
-            .then(()=>{
-                window.location.href='dashboard.html';
-            })
-            .catch((error)=>{
-                console.error("error writing document", error);
-                showMessage(`Error saving profile: ${error.message}`, 'signUpMessage', true);
-            });
-        })
-        .catch((error)=>{
-            const errorCode=error.code;
-            if(errorCode=='auth/email-already-in-use'){
-                showMessage('Email Address Already Exists!', 'signUpMessage', true);
-            } else if (errorCode == 'auth/weak-password') {
-                showMessage('Password is too weak (must be at least 6 characters).', 'signUpMessage', true);
-            } else {
-                showMessage(`Error: ${error.message}`, 'signUpMessage', true);
-            }
-        });
-    });
+    }, 4000);
 }
 
- const signIn=document.getElementById('submitSignIn');
- if (signIn) {
-    signIn.addEventListener('click', (event)=>{
+// --- Sign Up Logic ---
+const signUpButton = document.getElementById('submitSignUp');
+if (signUpButton) {
+    signUpButton.addEventListener('click', (event) => {
         event.preventDefault();
-        const email=document.getElementById('email').value;
-        const password=document.getElementById('password').value;
+        
+        // 1. Get all form values
+        const email = document.getElementById('rEmail').value;
+        const password = document.getElementById('rPassword').value;
+        const firstName = document.getElementById('fName').value;
+        const lastName = document.getElementById('lName').value;
+        const bio = document.getElementById('rBio').value; // Get the bio
 
-        if (!email || !password) {
-            showMessage('Please enter both email and password.', 'signInMessage', true);
+        // Basic validation
+        if (!email || !password || !firstName || !lastName || !bio) {
+            showMessage('Error: All fields are required.', 'signUpMessage');
             return;
         }
 
-        signInWithEmailAndPassword(auth, email,password)
-        .then((userCredential)=>{
-            showMessage('Login is successful! Redirecting...', 'signInMessage', false);
-            const user=userCredential.user;
-            localStorage.setItem('loggedInUserId', user.uid);
-            
-            window.location.href='dashboard.html';
-        })
-        .catch((error)=>{
-            const errorCode=error.code;
-            if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/wrong-password' || errorCode === 'auth/user-not-found') {
-                showMessage('Incorrect Email or Password.', 'signInMessage', true);
-            } else {
-                showMessage(`Error: ${error.message}`, 'signInMessage', true);
-            }
-        });
+        // 2. Create the user in Firebase Auth
+        createUserWithEmailAndPassword(auth, email, password)
+            .then(async (userCredential) => {
+                const user = userCredential.user;
+
+                // 3. Define the PRIVATE user profile data
+                const privateUserData = {
+                    email: email,
+                    firstName: firstName,
+                    lastName: lastName,
+                    bio: bio // Save the bio
+                };
+                
+                // 4. Define the PUBLIC user directory data
+                const publicUserData = {
+                    firstName: firstName,
+                    lastName: lastName
+                };
+
+                // 5. Set up document references
+                // Path for PRIVATE data (only the user can read/write)
+                const privateDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/profile/info`);
+                
+                // Path for PUBLIC data (everyone can read)
+                const publicDocRef = doc(db, `artifacts/${appId}/public/data/user_directory`, user.uid);
+
+                try {
+                    // 6. Write both documents
+                    await setDoc(privateDocRef, privateUserData);
+                    await setDoc(publicDocRef, publicUserData);
+
+                    // 7. Success!
+                    showMessage('Account Created Successfully!', 'signUpMessage');
+                    
+                    // Redirect to the main dashboard
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1000); // Short delay so user can see message
+
+                } catch (dbError) {
+                    console.error("Error writing document(s):", dbError);
+                    showMessage('Error: Could not save profile.', 'signUpMessage');
+                }
+            })
+            .catch((authError) => {
+                // 8. Handle Auth errors
+                const errorCode = authError.code;
+                if (errorCode == 'auth/email-already-in-use') {
+                    showMessage('Error: Email Address Already Exists!', 'signUpMessage');
+                } else if (errorCode == 'auth/weak-password') {
+                    showMessage('Error: Password is too weak.', 'signUpMessage');
+                } else {
+                    console.error("Auth Error:", authError);
+                    showMessage('Error: Unable to create user.', 'signUpMessage');
+                }
+            });
+    });
+}
+
+// --- Sign In Logic ---
+const signInButton = document.getElementById('submitSignIn');
+if (signInButton) {
+    signInButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        if (!email || !password) {
+            showMessage('Error: Email and Password are required.', 'signInMessage');
+            return;
+        }
+
+        signInWithEmailAndPassword(auth, email, password)
+            .then((userCredential) => {
+                // Sign in successful
+                showMessage('Login is successful!', 'signInMessage');
+                
+                // Redirect to the main dashboard
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000); // Short delay so user can see message
+            })
+            .catch((error) => {
+                // Handle Sign In errors
+                const errorCode = error.code;
+                if (errorCode === 'auth/invalid-credential') {
+                    showMessage('Error: Incorrect Email or Password.', 'signInMessage');
+                } else {
+                    console.error("Sign In Error:", error);
+                    showMessage('Error: Account does not exist or login failed.', 'signInMessage');
+                }
+            });
     });
 }
 

@@ -8,20 +8,18 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
-    <!-- Configure Tailwind for Inter font -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                     colors: {
+                    colors: {
                         'primary': {
                             500: '#3b82f6', // Blue-500
-                            600: '#2563eb',
+                            600: '#2563eb', // Blue-600
                         },
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
                     },
                 }
             }
@@ -31,24 +29,23 @@
 <body class="bg-gray-100 font-sans">
 
     <!-- Navbar -->
-    <nav class="bg-white shadow-md w-full top-0 left-0 z-40">
+    <nav class="bg-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <!-- Logo -->
-                <a href="dashboard.html" class="flex items-center space-x-2">
-                    <i class="fas fa-handshake text-primary-500 text-2xl"></i>
+                <a href="#" class="flex items-center space-x-2">
+                    <i class="fas fa-handshake text-primary-600 text-2xl"></i>
                     <span class="text-2xl font-bold text-gray-900">Skill Swap</span>
                 </a>
                 
-                <!-- Right Side Icons -->
-                <div class="flex items-center space-x-5">
-                     <!-- Profile Button -->
-                     <a href="homepage.html" title="View Profile" class="text-gray-600 hover:text-primary-500 transition duration-150">
-                        <i class="fas fa-user-circle text-2xl"></i>
-                     </a>
-                     <!-- Logout Button -->
-                     <button id="logout" title="Logout" class="flex items-center space-x-2 text-gray-600 hover:text-red-500 font-medium transition duration-150">
-                        <i class="fas fa-sign-out-alt text-2xl"></i>
+                <!-- Nav Links -->
+                <div class="flex items-center space-x-4">
+                    <span id="welcomeMessage" class="text-gray-700">Welcome!</span>
+                    <a href="homepage.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
+                        Profile
+                    </a>
+                    <button id="logout" class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-500 shadow-md">
+                        Logout
                     </button>
                 </div>
             </div>
@@ -56,25 +53,53 @@
     </nav>
 
     <!-- Main Content -->
-    <div class="min-h-screen flex items-center justify-center pt-16">
-        <div class="bg-white shadow-xl rounded-lg w-full max-w-4xl mx-4 my-8 p-8 text-center">
-            
-            <h1 id="welcomeMessage" class="text-4xl font-bold text-gray-900 mb-4">
-                Welcome!
-            </h1>
-            <p class="text-xl text-gray-600">
-                You're successfully logged in. This is your main dashboard.
-            </p>
-            <p class="mt-6">
-                 <a href="homepage.html" class="px-6 py-2 bg-primary-500 text-white font-semibold rounded-lg shadow hover:bg-primary-600 transition">
-                    View Your Profile
-                 </a>
-            </p>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Welcome Header -->
+        <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">Available Users</h1>
+            <p class="mt-2 text-gray-600">Here are the other users on the platform. Click on any user to see their details and what they offer.</p>
+        </div>
 
+        <!-- User List Container -->
+        <div id="userListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- User cards will be dynamically inserted here by dashboard.js -->
+            <p class="text-gray-500 p-4">Loading user list...</p>
+        </div>
+
+    </div>
+
+    <!-- ============================================== -->
+    <!-- USER PROFILE MODAL (Initially Hidden) -->
+    <!-- ============================================== -->
+
+    <!-- Modal Backdrop -->
+    <div id="userModalBackdrop" class="fixed inset-0 bg-black bg-opacity-60 hidden z-40"></div>
+
+    <!-- Modal Content -->
+    <div id="userModal" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl z-50 w-11/12 md:w-full max-w-lg p-6 hidden">
+        <div class="flex justify-between items-center pb-3 border-b">
+            <h2 id="modalUserName" class="text-2xl font-bold text-gray-800">User Profile</h2>
+            <button id="closeUserModal" class="text-gray-500 hover:text-gray-800 text-2xl">
+                &times;
+            </button>
+        </div>
+
+        <div class="mt-4 space-y-4">
+            <div>
+                <label class="text-sm font-medium text-gray-500">Email</label>
+                <p id="modalUserEmail" class="text-lg text-gray-900">loading...</p>
+            </div>
+            <div>
+                <label class="text-sm font-medium text-gray-500">Bio</label>
+                <p id="modalUserBio" class="text-lg text-gray-900 bg-gray-50 p-3 rounded-md min-h-[50px]">loading...</p>
+            </div>
         </div>
     </div>
 
-    <!-- This script protects the page and handles logout -->
-    <script type="module" src="./dashboard.js"></script>
+
+    <!-- JavaScript file -->
+    <script type="module" src="dashboard.js"></script>
 </body>
 </html>
+
