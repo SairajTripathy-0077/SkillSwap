@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skill Swap: Exchange Knowledge, Grow Together</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Custom Styles for better form appearance */
+        :root {
+            --primary-color: #3b82f6; /* Blue 500 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        
+        /* Hide scrollbar when modal is open */
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        /* Modal Styles */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 50;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .form-container {
+            /* Updated Positioning and Scrolling */
+            width: 95%;
+            max-width: 450px;
+            padding: 1.5rem;
+            margin: 20px auto; /* Add margin top/bottom */
+            top: 0; /* Align to the top edge for scrolling */
+            left: 50%;
+            transform: translateX(-50%); /* Center horizontally only */
+            max-height: 95vh; /* Limit the height to the viewport height */
+            overflow-y: auto; /* Enable scrolling if content exceeds max-height */
+            
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            z-index: 51;
+            position: fixed; /* Keep it fixed so it overlays the content */
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+
+        /* Form Input Styling (adapted for Tailwind) */
+        .input-group {
+            position: relative;
+            padding: 1rem 0;
+        }
+        .input-group input {
+            color: inherit;
+            width: 100%;
+            background-color: transparent;
+            border: none;
+            border-bottom: 2px solid #e5e7eb; /* Gray 200 */
+            padding-left: 2.5rem;
+            padding-right: 2.5rem; /* Ensure space for the toggle icon */
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-color);
+        }
+        
+        /* Lock Icon Placement */
+        .input-group > i:first-child { 
+            position: absolute;
+            top: 50%;
+            left: 0.5rem;
+            transform: translateY(-50%);
+            color: #9ca3af; /* Gray 400 */
+        }
+        
+        /* Password toggle icon */
+        .password-toggle {
+            position: absolute;
+            top: 50%;
+            right: 0.5rem; /* Aligns to the right edge of the input */
+            transform: translateY(-50%);
+            color: #9ca3af;
+            cursor: pointer;
+            z-index: 60; /* Ensure it is clickable over the input */
+        }
+
+        /* Custom Label Animation (for the classic look) */
+        .input-group label {
+            color: #9ca3af;
+            position: absolute;
+            left: 2.5rem; /* Initial position matches input padding */
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: text;
+            transition: 0.3s ease all;
+            pointer-events: none;
+        }
+        
+        /* Focused Label Placement */
+        .input-group input:focus ~ label,
+        .input-group input:not(:placeholder-shown) ~ label {
+            top: 0.2rem; /* Adjusted top position to sit slightly higher */
+            left: 2.5rem; /* Stays aligned with the input text start */
+            transform: translateY(0);
+            color: var(--primary-color);
+            font-size: 0.8rem;
+        }
+        
+        /* Textarea specific styling */
+        #rBio:focus {
+            border-color: var(--primary-color) !important;
+            box-shadow: 0 0 0 1px var(--primary-color);
+        }
+        
+        /* This is the style your firebaseauth.js expects for messages */
+        .messageDiv {
+            padding: 8px 12px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            opacity: 1;
+            transition: opacity 0.5s;
+            display: none; /* Hidden by default */
+            color: white;
+            background-color: #ef4444; /* Default error color */
+        }
+        
+    </style>
+    <!-- Configure Tailwind for Inter font and primary colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': {
+                            500: '#3b82f6', // Blue (Grow Together/Main CTA)
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        },
+                        'secondary': { // Teal (Learn)
+                            500: '#14b8a6', 
+                            600: '#0d9488',
+                        },
+                        'tertiary': { // Pink (Teach)
+                            500: '#ec4899', 
+                            600: '#db2777',
+                        },
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md fixed w-full top-0 left-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <a href="#" class="flex items-center space-x-2">
+                    <i class="fas fa-handshake text-primary-500 text-2xl"></i>
+                    <span class="text-2xl font-bold text-gray-900">Skill Swap</span>
+                </a>
+                
+                <!-- Auth Links Wrapper - Static for logged-out page -->
+                <div class="flex items-center space-x-4">
+                    <div id="authLinks" class="flex items-center space-x-2">
+                        <button id="navSignInButton" class="text-gray-600 hover:text-primary-500 font-medium transition duration-150">Login</button>
+                        <button id="navSignUpButton" class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-500 hover:bg-primary-600 shadow-md transition duration-150">Get Started</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="bg-white pt-32 pb-20"> <!-- Added padding-top to offset fixed nav -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <!-- MOTO with three colors -->
+            <h1 class="text-5xl font-extrabold text-gray-900 sm:text-6xl md:text-7xl mb-6">
+                <span class="text-secondary-500">Learn</span>, <span class="text-tertiary-500">Teach</span>, and <span class="text-primary-500">Grow Together</span>.
+            </h1>
+            <p class="mt-3 text-xl text-gray-500 sm:mt-5 sm:text-2xl max-w-3xl mx-auto">
+                Connect with passionate individuals eager to exchange knowledge, from coding and design to cooking and languages—without spending a dime.
+            </p>
+            <div class="mt-10 flex justify-center space-x-4">
+                <button id="heroSignUpButton" class="px-8 py-3 text-lg font-semibold rounded-lg text-white bg-primary-500 hover:bg-primary-600 shadow-xl transform hover:scale-105 transition duration-300">
+                    Sign Up Now <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+                <button id="heroSignInButton" class="px-8 py-3 text-lg font-semibold rounded-lg text-primary-500 bg-white border-2 border-primary-500 hover:bg-primary-50 transition duration-300">
+                    Already a Swapper?
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Features Section -->
+    <section class="py-16 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-12">How It Works</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Feature 1: List Your Skills (Teal - Learn/Growth Focus) -->
+                <div class="p-6 bg-white rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300 border-t-4 border-secondary-500">
+                    <div class="p-4 bg-secondary-50 text-secondary-500 rounded-full inline-flex"><i class="fas fa-lightbulb text-3xl"></i></div>
+                    <h3 class="mt-4 text-xl font-semibold text-gray-900">List Your Skills</h3>
+                    <p class="mt-2 text-gray-600">Offer anything you're good at, from Python to painting, to your local community.</p>
+                </div>
+                <!-- Feature 2: Find a Match (Pink - Exchange/Teaching Focus) -->
+                <div class="p-6 bg-white rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300 border-t-4 border-tertiary-500">
+                    <div class="p-4 bg-tertiary-50 text-tertiary-500 rounded-full inline-flex"><i class="fas fa-search text-3xl"></i></div>
+                    <h3 class="mt-4 text-xl font-semibold text-gray-900">Find a Match</h3>
+                    <p class="mt-2 text-gray-600">Browse skills offered by others. Learn French? Teach someone math!</p>
+                </div>
+                <!-- Feature 3: Swap & Connect (Blue - Core Platform/Connection Focus) -->
+                <div class="p-6 bg-white rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300 border-t-4 border-primary-500">
+                    <div class="p-4 bg-primary-50 text-primary-500 rounded-full inline-flex"><i class="fas fa-comments text-3xl"></i></div>
+                    <h3 class="mt-4 text-xl font-semibold text-gray-900">Swap & Connect</h3>
+                    <p class="mt-2 text-gray-600">Schedule a swap session online or in-person and start growing your network and skills.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p>&copy; 2024 Skill Swap. All rights reserved.</p>
+            <div class="mt-2 space-x-4 text-sm">
+                <a href="#" class="hover:text-primary-500">Privacy</a>
+                <a href="#" class="hover:text-primary-500">Terms</a>
+            </div>
+        </div>
+    </footer>
+
+
+    <!-- ============================================== -->
+    <!-- MODAL FORMS (Initially Hidden) -->
+    <!-- ============================================== -->
+
+    <!-- Modal Backdrop -->
+    <div id="modalBackdrop" class="modal-backdrop fixed inset-0 hidden"></div>
+
+    <!-- Sign Up Form (Reuses original content) -->
+    <div id="signup" class="form-container bg-white fixed hidden p-6">
+        <h2 class="form-title text-2xl font-bold text-center mb-6 text-gray-800">Register for Skill Swap</h2>
+        <button id="closeSignup" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800"><i class="fas fa-times"></i></button>
+        <form id="signupForm" method="post" action="">
+            <!-- Message div for firebaseauth.js -->
+            <div id="signUpMessage" class="messageDiv"></div>
+            
+            <div class="input-group">
+                <i class="fas fa-user"></i>
+                <input type="text" id="fName" placeholder=" " required>
+                <label for="fName">First Name</label>
+            </div>
+            <div class="input-group">
+                <i class="fas fa-user"></i>
+                <input type="text" id="lName" placeholder=" " required>
+                <label for="lName">Last Name</label>
+            </div>
+            
+            <!-- Bio/Skill Description Input -->
+            <div class="mt-4">
+                <label for="rBio" class="block text-sm font-medium text-gray-700 text-left">Bio:</label>
+                <textarea id="rBio" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-primary-500 focus:ring-primary-500 p-2 border" placeholder="e.g., I offer guitar lessons and want to learn Spanish." required></textarea>
+            </div>
+            
+            <div class="input-group mt-2">
+                <i class="fas fa-envelope"></i>
+                <input type="email" id="rEmail" placeholder=" " required>
+                <label for="rEmail">Email</label>
+            </div>
+            
+            <!-- Sign Up Password Field (with Toggle) -->
+            <div class="input-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="rPassword" placeholder=" " required>
+                <label for="rPassword">Password</label>
+                <i id="toggleRPassword" class="password-toggle fas fa-eye-slash"></i>
+            </div>
+
+            <!-- This button's click is handled by firebaseauth.js -->
+            <button class="btn w-full bg-primary-500 text-white py-2 rounded-lg font-semibold mt-4 hover:bg-primary-600 transition" id="submitSignUp">Sign Up</button>
+        </form>
+        
+        <p class="or text-center my-4 text-gray-500">
+          ----------or--------
+        </p>
+        <div class="links text-center">
+            <p class="text-sm text-gray-600">Already Have Account?</p>
+            <button id="switchSignInButton" class="text-primary-500 font-bold hover:underline mt-2">Sign In Here</button>
+        </div>
+    </div>
+
+    <!-- Sign In Form (Reuses original content) -->
+    <div id="signIn" class="form-container bg-white fixed hidden p-6">
+        <h2 class="form-title text-2xl font-bold text-center mb-6 text-gray-800">Sign In to Swap</h2>
+        <button id="closeSignIn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800"><i class="fas fa-times"></i></button>
+        <form id="signInForm" method="post" action="">
+            <!-- Message div for firebaseauth.js -->
+            <div id="signInMessage" class="messageDiv"></div>
+
+            <div class="input-group">
+                <i class="fas fa-envelope"></i>
+                <input type="email" id="email" placeholder=" " required>
+                <label for="email">Email</label>
+            </div>
+            
+            <!-- Sign In Password Field (with Toggle) -->
+            <div class="input-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="password" placeholder=" " required>
+                <label for="password">Password</label>
+                <i id="togglePassword" class="password-toggle fas fa-eye-slash"></i>
+            </div>
+            
+            <p class="recover text-right text-sm mb-4">
+                <a href="#" class="text-gray-500 hover:text-primary-500">Recover Password</a>
+            </p>
+            
+            <!-- This button's click is handled by firebaseauth.js -->
+            <button class="btn w-full bg-primary-500 text-white py-2 rounded-lg font-semibold mt-4 hover:bg-primary-600 transition" id="submitSignIn">Sign In</button>
+        </form>
+        
+        <p class="or text-center my-4 text-gray-500">
+            ----------or--------
+        </p>
+        <div class="links text-center">
+            <p class="text-sm text-gray-600">Don't have account yet?</p>
+            <button id="switchSignUpButton" class="text-primary-500 font-bold hover:underline mt-2">Sign Up Here</button>
+        </div>
+    </div>
+
+
+    <!-- ============================================== -->
+    <!-- (1) FRONTEND-ONLY APP LOGIC (MODALS, TOGGLES) -->
+    <!-- ============================================== -->
+    <script>
+        // --- DOM Elements ---
+        const modalBackdrop = document.getElementById('modalBackdrop');
+        const signInContainer = document.getElementById('signIn');
+        const signUpContainer = document.getElementById('signup');
+        
+        // Nav buttons
+        const navSignInButton = document.getElementById('navSignInButton');
+        const navSignUpButton = document.getElementById('navSignUpButton');
+        const heroSignInButton = document.getElementById('heroSignInButton');
+        const heroSignUpButton = document.getElementById('heroSignUpButton');
+        
+        // Modal buttons
+        const closeSignIn = document.getElementById('closeSignIn');
+        const closeSignup = document.getElementById('closeSignup');
+        const switchSignInButton = document.getElementById('switchSignInButton'); // Toggle link
+        const switchSignUpButton = document.getElementById('switchSignUpButton'); // Toggle link
+
+        // --- Modal Logic ---
+        function openModal(modalElement) {
+            // Clear messages when opening
+            const messages = modalElement.querySelectorAll('.messageDiv');
+            messages.forEach(msg => {
+                msg.style.display = 'none';
+                msg.textContent = '';
+            });
+
+            modalBackdrop.classList.remove('hidden');
+            modalElement.classList.remove('hidden');
+            document.body.classList.add('modal-open');
+        }
+        
+        function closeModal() {
+            modalBackdrop.classList.add('hidden');
+            signInContainer.classList.add('hidden');
+            signUpContainer.classList.add('hidden');
+            document.body.classList.remove('modal-open');
+        }
+
+        // Toggle forms *within* the modal
+        function showSignInForm() {
+            signUpContainer.classList.add('hidden');
+            signInContainer.classList.remove('hidden');
+        }
+        function showSignUpForm() {
+            signInContainer.classList.add('hidden');
+            signUpContainer.classList.remove('hidden');
+        }
+
+        // --- Password Toggle Logic ---
+        function setupPasswordToggle(inputId, toggleId) {
+            const passwordInput = document.getElementById(inputId);
+            const toggleIcon = document.getElementById(toggleId);
+
+            if (passwordInput && toggleIcon) {
+                toggleIcon.addEventListener('click', () => {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    
+                    // Toggle the eye icon
+                    toggleIcon.classList.toggle('fa-eye');
+                    toggleIcon.classList.toggle('fa-eye-slash');
+                });
+            }
+        }
+        // Apply toggle to Sign Up password field
+        setupPasswordToggle('rPassword', 'toggleRPassword');
+        // Apply toggle to Sign In password field
+        setupPasswordToggle('password', 'togglePassword');
+
+
+        // --- Event Listeners ---
+        // 1. Open Modals
+        navSignInButton.addEventListener('click', () => openModal(signInContainer));
+        heroSignInButton.addEventListener('click', () => openModal(signInContainer));
+        navSignUpButton.addEventListener('click', () => openModal(signUpContainer));
+        heroSignUpButton.addEventListener('click', () => openModal(signUpContainer));
+        
+        // 2. Close Modals
+        closeSignIn.addEventListener('click', closeModal);
+        closeSignup.addEventListener('click', closeModal);
+        modalBackdrop.addEventListener('click', closeModal);
+        
+        // 3. Switch Forms
+        switchSignInButton.addEventListener('click', showSignInForm);
+        switchSignUpButton.addEventListener('click', showSignUpForm);
+    </script>
+    
+    <!-- ============================================== -->
+    <!-- (2) FIREBASE AUTHENTICATION LOGIC -->
+    <!-- ============================================== -->
+    <script type="module" src="firebaseauth.js"></script>
+
+</body>
+</html>
+
