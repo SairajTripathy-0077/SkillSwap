@@ -8,30 +8,34 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
-    <!-- Configure Tailwind for Inter font -->
+    <!-- Configure Tailwind -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                     colors: {
+                    colors: {
                         'primary': {
-                            500: '#3b82f6', // Blue-500
+                            500: '#3b82f6',
                             600: '#2563eb',
                         },
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
                     },
                 }
             }
         }
     </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-100 min-h-screen">
 
     <!-- Navbar -->
-    <nav class="bg-white shadow-md w-full top-0 left-0 z-40">
+    <nav class="bg-white shadow-md fixed w-full top-0 left-0 z-30">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <!-- Logo -->
@@ -40,57 +44,113 @@
                     <span class="text-2xl font-bold text-gray-900">Skill Swap</span>
                 </a>
                 
-                <!-- Right Side Icons -->
-                <div class="flex items-center space-x-5">
-                     <!-- Dashboard Button -->
-                     <a href="dashboard.html" title="Back to Dashboard" class="text-gray-600 hover:text-primary-500 transition duration-150">
-                        <i class="fas fa-home text-2xl"></i>
-                     </a>
-                     <!-- Logout Button -->
-                     <button id="logout" title="Logout" class="flex items-center space-x-2 text-gray-600 hover:text-red-500 font-medium transition duration-150">
-                        <i class="fas fa-sign-out-alt text-2xl"></i>
+                <!-- Nav Links -->
+                <div class="flex items-center space-x-4">
+                    <a href="dashboard.html" class="text-gray-600 hover:text-primary-500 font-medium transition duration-150">
+                        <i class="fas fa-th-large mr-1"></i> Dashboard
+                    </a>
+                    <button id="logout" class="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-primary-600 bg-primary-100 hover:bg-primary-200 transition duration-150">
+                        Logout
                     </button>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="min-h-screen flex items-center justify-center pt-16">
-        <div class="bg-white shadow-xl rounded-lg w-full max-w-2xl mx-4 my-8 p-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-6 text-center">My Profile</h1>
+    <!-- Main Content (Profile Card) -->
+    <div class="pt-24 pb-12"> <!-- Padding top to offset fixed nav -->
+        <div class="max-w-3xl mx-auto bg-white rounded-lg shadow-xl overflow-hidden">
             
-            <div class="space-y-4">
-                <!-- First Name -->
-                <div class="p-4 border border-gray-200 rounded-lg">
-                    <label class="text-sm font-medium text-gray-500">First Name</label>
-                    <div id="loggedUserFName" class="text-lg font-semibold text-gray-900">Loading...</div>
-                </div>
-                
-                <!-- Last Name -->
-                <div class="p-4 border border-gray-200 rounded-lg">
-                    <label class="text-sm font-medium text-gray-500">Last Name</label>
-                    <div id="loggedUserLName" class="text-lg font-semibold text-gray-900">Loading...</div>
-                </div>
-                
-                <!-- Email -->
-                <div class="p-4 border border-gray-200 rounded-lg">
-                    <label class="text-sm font-medium text-gray-500">Email</label>
-                    <div id="loggedUserEmail" class="text-lg font-semibold text-gray-900">Loading...</div>
-                </div>
+            <!-- Card Header -->
+            <div class="p-6 border-b border-gray-200">
+                <h1 class="text-3xl font-bold text-gray-900">My Profile</h1>
+                <p class="text-gray-600 mt-1">Your personal information and skills.</p>
+            </div>
 
-                <!-- Bio -->
-                <div class="p-4 border border-gray-200 rounded-lg">
-                    <label class="text-sm font-medium text-gray-500">My Bio</label>
-                    <p id="loggedUserBio" class="text-lg text-gray-800 mt-1">Loading...</p>
+            <!-- Card Body (Profile Info) -->
+            <div class="p-6 space-y-6">
+                <!-- *** UPDATED: Combined Name Field *** -->
+                <div>
+                    <label class="text-sm font-semibold text-gray-500 uppercase">Name</label>
+                    <p id="loggedUserName" class="text-2xl text-gray-900 p-3 bg-gray-50 rounded-md mt-1">Loading...</p>
                 </div>
+                <!-- *** END UPDATE *** -->
+
+                <div>
+                    <label class="text-sm font-semibold text-gray-500 uppercase">Email</label>
+                    <p id="loggedUserEmail" class="text-xl text-gray-900 p-3 bg-gray-50 rounded-md mt-1">Loading...</p>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-gray-500 uppercase">My Bio</label>
+                    <p id="loggedUserBio" class="text-xl text-gray-900 p-3 bg-gray-50 rounded-md mt-1 min-h-[80px]">Loading...</p>
+                </div>
+            </div>
+
+            <!-- Card Footer - Edit Button -->
+            <div class="p-6 bg-gray-50 border-t border-gray-200 text-right">
+                <button id="editProfileButton" class="px-5 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-500 shadow-md transition duration-150">
+                    <i class="fas fa-pencil-alt mr-2"></i>
+                    Edit Profile
+                </button>
             </div>
 
         </div>
     </div>
 
-    <!-- This script fetches data and handles logout -->
-    <script type="module" src="./homepage.js"></script>
+    <!-- 
+    ================================================================
+    Edit Profile Modal
+    ================================================================
+    -->
+    <div id="editModalBackdrop" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-40 hidden"></div>
+    <div id="editModal" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl w-full max-w-lg z-50 hidden">
+        <!-- Modal Header -->
+        <div class="flex justify-between items-center p-5 border-b border-gray-200">
+            <h2 class="text-2xl font-bold text-gray-800">Edit Your Profile</h2>
+            <button id="closeEditModal" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <!-- Modal Body (Form) -->
+        <div class="p-6 space-y-4">
+            <!-- Form Success/Error Message -->
+            <div id="editMessage" class="hidden p-3 rounded-md text-sm"></div>
+
+            <!-- *** NOTE: Separate fields for editing *** -->
+            <div>
+                <label for="editFName" class="block text-sm font-semibold text-gray-600 uppercase mb-1">First Name</label>
+                <input type="text" id="editFName" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
+            </div>
+            <div>
+                <label for="editLName" class="block text-sm font-semibold text-gray-600 uppercase mb-1">Last Name</label>
+                <input type="text" id="editLName" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
+            </div>
+            <!-- *** END NOTE *** -->
+
+            <div>
+                <label for="editBio" class="block text-sm font-semibold text-gray-600 uppercase mb-1">My Bio</label>
+                <textarea id="editBio" rows="4" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="e.g., I offer guitar lessons and want to learn Spanish."></textarea>
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="flex justify-end items-center p-5 bg-gray-50 border-t border-gray-200 rounded-b-lg space-x-3">
+            <button id="cancelEditButton" class="px-5 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
+                Cancel
+            </button>
+            <button id="saveChangesButton" class="px-5 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-500 shadow-md transition duration-150">
+                <i class="fas fa-save mr-2"></i>
+                Save Changes
+            </button>
+        </div>
+    </div>
+    <!-- End of Edit Profile Modal -->
+
+
+    <!-- JavaScript file -->
+    <script type="module" src="homepage.js"></script>
+
 </body>
 </html>
 

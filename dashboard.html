@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Configure Tailwind -->
     <script>
         tailwind.config = {
             theme: {
@@ -25,26 +26,38 @@
             }
         }
     </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Simple modal transition */
+        .modal {
+            transition: opacity 0.25s ease;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-100 min-h-screen">
 
     <!-- Navbar -->
-    <nav class="bg-white shadow-md">
+    <nav class="bg-white shadow-md fixed w-full top-0 left-0 z-30">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <!-- Logo -->
-                <a href="#" class="flex items-center space-x-2">
-                    <i class="fas fa-handshake text-primary-600 text-2xl"></i>
+                <a href="dashboard.html" class="flex items-center space-x-2">
+                    <i class="fas fa-handshake text-primary-500 text-2xl"></i>
                     <span class="text-2xl font-bold text-gray-900">Skill Swap</span>
                 </a>
                 
                 <!-- Nav Links -->
                 <div class="flex items-center space-x-4">
-                    <span id="welcomeMessage" class="text-gray-700">Welcome!</span>
-                    <a href="homepage.html" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
-                        Profile
+                    <!-- Welcome Message -->
+                    <span id="welcomeMessage" class="hidden sm:block text-gray-700 font-medium">Welcome!</span>
+                    
+                    <a href="homepage.html" class="text-gray-600 hover:text-primary-500 font-medium transition duration-150" title="My Profile">
+                        <i class="fas fa-user-circle text-xl"></i>
+                        <span class="sr-only">My Profile</span>
                     </a>
-                    <button id="logout" class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-500 shadow-md">
+                    <button id="logout" class="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-primary-600 bg-primary-100 hover:bg-primary-200 transition duration-150">
                         Logout
                     </button>
                 </div>
@@ -52,54 +65,58 @@
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        <!-- Welcome Header -->
-        <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
-            <h1 class="text-3xl font-bold text-gray-800">Available Users</h1>
-            <p class="mt-2 text-gray-600">Here are the other users on the platform. Click on any user to see their details and what they offer.</p>
-        </div>
+    <!-- Main Content (User List) -->
+    <div class="pt-24 pb-12"> <!-- Padding top to offset fixed nav -->
+        <div class="max-w-4xl mx-auto px-4">
+            
+            <h1 class="text-3xl font-bold text-gray-900 mb-6">Available Users</h1>
+            
+            <!-- User List Container -->
+            <div id="userListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- User buttons will be dynamically inserted here by dashboard.js -->
+                <p class="text-gray-500 col-span-full">Loading users...</p>
+            </div>
 
-        <!-- User List Container -->
-        <div id="userListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- User cards will be dynamically inserted here by dashboard.js -->
-            <p class="text-gray-500 p-4">Loading user list...</p>
         </div>
-
     </div>
 
-    <!-- ============================================== -->
-    <!-- USER PROFILE MODAL (Initially Hidden) -->
-    <!-- ============================================== -->
-
-    <!-- Modal Backdrop -->
-    <div id="userModalBackdrop" class="fixed inset-0 bg-black bg-opacity-60 hidden z-40"></div>
-
-    <!-- Modal Content -->
-    <div id="userModal" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl z-50 w-11/12 md:w-full max-w-lg p-6 hidden">
-        <div class="flex justify-between items-center pb-3 border-b">
-            <h2 id="modalUserName" class="text-2xl font-bold text-gray-800">User Profile</h2>
-            <button id="closeUserModal" class="text-gray-500 hover:text-gray-800 text-2xl">
-                &times;
+    <!-- 
+    ================================================================
+    User Profile Modal (for viewing other users)
+    ================================================================
+    -->
+    <div id="userModalBackdrop" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-40 hidden modal"></div>
+    <div id="userModal" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl w-full max-w-lg z-50 hidden modal">
+        <!-- Modal Header -->
+        <div class="flex justify-between items-center p-5 border-b border-gray-200">
+            <h2 class="text-2xl font-bold text-gray-800">User Profile</h2>
+            <button id="closeUserModal" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
             </button>
         </div>
-
-        <div class="mt-4 space-y-4">
+        
+        <!-- Modal Body (Profile Info) -->
+        <div class="p-6 space-y-4">
             <div>
-                <label class="text-sm font-medium text-gray-500">Email</label>
-                <p id="modalUserEmail" class="text-lg text-gray-900">loading...</p>
+                <label class="text-sm font-semibold text-gray-500 uppercase">Name</label>
+                <p id="modalUserName" class="text-xl text-gray-900 p-2 bg-gray-50 rounded-md mt-1">Loading...</p>
             </div>
             <div>
-                <label class="text-sm font-medium text-gray-500">Bio</label>
-                <p id="modalUserBio" class="text-lg text-gray-900 bg-gray-50 p-3 rounded-md min-h-[50px]">loading...</p>
+                <label class="text-sm font-semibold text-gray-500 uppercase">Email</label>
+                <p id="modalUserEmail" class="text-xl text-gray-900 p-2 bg-gray-50 rounded-md mt-1">Loading...</p>
+            </div>
+            <div>
+                <label class="text-sm font-semibold text-gray-500 uppercase">Bio</label>
+                <p id="modalUserBio" class="text-xl text-gray-900 p-2 bg-gray-50 rounded-md mt-1 min-h-[60px]">Loading...</p>
             </div>
         </div>
     </div>
+    <!-- End of User Profile Modal -->
 
 
     <!-- JavaScript file -->
     <script type="module" src="dashboard.js"></script>
+
 </body>
 </html>
 
