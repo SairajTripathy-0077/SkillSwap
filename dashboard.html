@@ -26,6 +26,11 @@
                             500: '#ec4899', 
                             600: '#db2777',
                         },
+                        'error-red': { // Custom Red for Logout/Errors
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                            100: '#fee2e2',
+                        }
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
@@ -68,7 +73,15 @@
             color: #be185d; /* pink-700 */
         }
         /* --- END Skill Pill Styles --- */
-
+        
+        /* Custom scrollbar for better look */
+        .max-h-\[60vh\]::-webkit-scrollbar {
+            width: 8px;
+        }
+        .max-h-\[60vh\]::-webkit-scrollbar-thumb {
+            background-color: #9ca3af; /* Gray-400 */
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -78,21 +91,35 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <!-- Logo -->
-                <a href="dashboard.html" class="flex items-center space-x-2">
+                <a href="#" class="flex items-center space-x-2">
                     <i class="fas fa-handshake text-primary-500 text-2xl"></i>
                     <span class="text-2xl font-bold text-gray-900">Skill Swap</span>
                 </a>
                 
-                <!-- Nav Links -->
+                <!-- Nav Links (My Profile -> Dashboard -> Logout) -->
                 <div class="flex items-center space-x-4">
                     
+                    <!-- Notification Bell and Badge -->
+                    <div class="relative">
+                        <button id="notificationBell" class="p-2 text-gray-600 hover:text-primary-500 transition duration-150 relative">
+                            <i class="fas fa-bell text-xl"></i>
+                            <!-- Notification Badge (Red dot when count > 0) -->
+                            <span id="notificationBadge" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-error-red-600 rounded-full hidden">0</span>
+                        </button>
+                    </div>
+
                     <!-- Link to Profile Page -->
-                    <a href="homepage.html" class="text-gray-600 hover:text-primary-500 font-medium transition duration-150">
-                        <i class="fas fa-user mr-1"></i> My Profile
+                    <a href="homepage.html" class="px-3 py-2 text-sm font-medium rounded-md text-primary-600 bg-primary-100 hover:bg-primary-200 transition duration-150">
+                         <i class="fas fa-user mr-1"></i> My Profile
                     </a>
                     
-                    <!-- LOGOUT BUTTON (RED) -->
-                    <button id="logout" class="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition duration-150 shadow-md">
+                    <!-- Link to Dashboard (Current Page) -->
+                    <a href="#" class="text-gray-600 hover:text-primary-500 font-medium transition duration-150">
+                        <i class="fas fa-th-large mr-1"></i> Dashboard
+                    </a>
+
+                    <!-- Logout Button (Red Style) -->
+                    <button id="logout" class="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-error-red-600 hover:bg-error-red-700 shadow-md transition duration-150">
                         <i class="fas fa-sign-out-alt mr-1"></i> Logout
                     </button>
                 </div>
@@ -108,6 +135,11 @@
             <div class="mb-8">
                 <h1 id="welcomeMessage" class="text-4xl font-bold text-gray-900">Welcome!</h1>
                 <p class="text-xl text-gray-600 mt-1">Connect with others to learn and grow.</p>
+            </div>
+
+            <!-- Notification Area (Initially Hidden) -->
+            <div id="notificationArea" class="bg-white rounded-lg shadow-xl overflow-hidden mb-8 hidden">
+                <!-- Content injected by dashboard.js (Pending Requests) -->
             </div>
 
             <!-- User List Section -->
@@ -142,6 +174,10 @@
         
         <!-- Modal Body (User Info) -->
         <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+            
+            <!-- Message Area for Swap Requests -->
+            <div id="swapRequestMessage" class="hidden p-3 rounded-md text-sm"></div>
+
             <!-- Email -->
             <div>
                 <label class="text-sm font-semibold text-gray-500 uppercase">Email</label>
@@ -154,31 +190,34 @@
                 <p id="modalUserBio" class="text-lg text-gray-900 p-2 bg-gray-50 rounded-md mt-1 min-h-[60px]">Loading...</p>
             </div>
 
-            <!-- --- Skills I Offer --- -->
+            <!-- Skills I Offer -->
             <hr>
             <div>
                 <h3 class="text-lg font-semibold text-gray-800 mb-2">
                     <i class="fas fa-chalkboard-teacher text-primary-500 mr-2"></i>Skills I Offer
                 </h3>
                 <div id="modalSkillOfferContainer" class="skill-pill-container">
-                    <!-- Skill pills will be added here by JS -->
                     <p class="text-gray-500 text-sm">Loading skills...</p>
                 </div>
             </div>
-            <!-- --- END: Skills I Offer --- -->
 
-            <!-- --- Skills I'm Seeking --- -->
+            <!-- Skills I'm Seeking -->
             <div>
                 <h3 class="text-lg font-semibold text-gray-800 mb-2">
                     <i class="fas fa-book-open text-tertiary-500 mr-2"></i>Skills I'm Seeking
                 </h3>
                 <div id="modalSkillSeekContainer" class="skill-pill-container">
-                    <!-- Skill pills will be added here by JS -->
                     <p class="text-gray-500 text-sm">Loading skills...</p>
                 </div>
             </div>
-            <!-- --- END: Skills I'm Seeking --- -->
+        </div>
 
+        <!-- Modal Footer - Request Swap Button -->
+        <div class="p-5 bg-gray-50 border-t border-gray-200 text-right">
+            <button id="requestSwapButton" class="px-5 py-2 text-sm font-medium text-white bg-secondary-500 rounded-md hover:bg-secondary-600 shadow-md transition duration-150 w-full md:w-auto">
+                <i class="fas fa-comment-dots mr-2"></i>
+                Request Swap
+            </button>
         </div>
     </div>
     <!-- End of User Profile Modal -->

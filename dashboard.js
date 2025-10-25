@@ -7,7 +7,12 @@ import {
     setLogLevel,
     collection,
     query,
-    onSnapshot
+    onSnapshot,
+    serverTimestamp,
+    setDoc, // Used for creating swap requests
+    where,
+    updateDoc, // Used for updating swap requests
+    getDocs // Used for checking existing pending requests
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Use your specific Firebase Config ---
@@ -29,18 +34,329 @@ setLogLevel('Debug'); // Enable Firebase logging
 // Get the app ID (project ID in this case) for the DB path
 const appId = firebaseConfig.projectId || 'default-app-id';
 
+// Global state
+let currentUserId = null;
+let currentReceiverId = null; // Stores the ID of the user whose profile modal is open
+let usersDirectory = {}; // Cache public user data (id -> {firstName, lastName})
+
+// --- Element References ---
+const userModal = document.getElementById('userModal');
+const userModalBackdrop = document.getElementById('userModalBackdrop');
+const notificationArea = document.getElementById('notificationArea');
+const notificationBadge = document.getElementById('notificationBadge');
+const logoutButton = document.getElementById('logout');
+const notificationBell = document.getElementById('notificationBell');
+const requestSwapButton = document.getElementById('requestSwapButton');
+
 /**
  * Creates a promise that resolves with the user's initial auth state.
- * This prevents the "flicker" redirect bug.
  */
 const getInitialUser = () => {
   return new Promise((resolve, reject) => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      unsubscribe(); // Stop listening after the first state is confirmed
+      unsubscribe(); 
       resolve(user);
     }, reject);
   });
 };
+
+// --- Notification Area Logic ---
+
+/**
+ * Fetches user first names and caches them for use in notifications.
+ */
+async function fetchUserNames(userIds) {
+    const names = {};
+    const promises = userIds.map(async (id) => {
+        if (usersDirectory[id]) {
+            names[id] = `${usersDirectory[id].firstName} ${usersDirectory[id].lastName}`;
+            return;
+        }
+        
+        // Fetch from the public directory
+        const docRef = doc(db, `artifacts/${appId}/public/data/user_directory`, id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const fullName = `${data.firstName} ${data.lastName}`;
+            names[id] = fullName;
+            usersDirectory[id] = { firstName: data.firstName, lastName: data.lastName }; // Cache
+        } else {
+            names[id] = 'Unknown User';
+        }
+    });
+    // Wait for all name fetches to complete
+    await Promise.all(promises.filter(p => p)); 
+    return names;
+}
+
+/**
+ * Handles accepting or rejecting a swap request.
+ */
+async function handleSwapResponse(requestId, action) {
+    const requestDocRef = doc(db, `artifacts/${appId}/public/data/swap_requests`, requestId);
+    const newStatus = action === 'accept' ? 'accepted' : 'rejected';
+
+    try {
+        await updateDoc(requestDocRef, {
+            status: newStatus
+        });
+        console.log(`Swap request ${requestId} ${newStatus}.`);
+
+        // The onSnapshot listener will automatically refresh the notification list
+        // Show temporary message if needed
+    } catch (error) {
+        console.error(`Error updating request ${requestId}:`, error);
+    }
+}
+
+
+/**
+ * Fetches and renders the current user's incoming swap requests.
+ */
+function listenForSwapRequests(currentUserId) {
+    if (!notificationArea) return;
+    
+    // Query for requests where the current user is the receiver and the status is pending
+    const requestsCollectionRef = collection(db, `artifacts/${appId}/public/data/swap_requests`);
+    const q = query(
+        requestsCollectionRef,
+        where("receiverId", "==", currentUserId),
+        where("status", "==", "pending")
+    );
+
+    onSnapshot(q, async (snapshot) => {
+        const pendingRequests = [];
+        snapshot.forEach((doc) => {
+            pendingRequests.push({ id: doc.id, ...doc.data() });
+        });
+
+        // Update the badge
+        if (notificationBadge) {
+            notificationBadge.classList.toggle('hidden', pendingRequests.length === 0);
+            notificationBadge.innerText = pendingRequests.length;
+        }
+
+        // Render the notification area
+        if (pendingRequests.length > 0) {
+            
+            // Fetch sender names for all pending requests
+            const senderIds = pendingRequests.map(req => req.senderId);
+            const senderNamesMap = await fetchUserNames(senderIds);
+
+            notificationArea.innerHTML = `
+                <div class="p-6">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center mb-4">
+                        <i class="fas fa-bell text-yellow-500 mr-2"></i> 
+                        You have ${pendingRequests.length} Pending Swap Request(s)
+                    </h2>
+                    <div id="requestList" class="space-y-4">
+                        ${pendingRequests.map(req => {
+                            const senderName = senderNamesMap[req.senderId] || 'Unknown User';
+                            return `
+                                <div id="request-${req.id}" class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex justify-between items-center flex-wrap gap-3">
+                                    <p class="font-medium text-gray-700">
+                                        <span class="text-primary-600 font-semibold">${senderName}</span> wants to swap skills with you.
+                                    </p>
+                                    <div class="flex space-x-2">
+                                        <button data-requestid="${req.id}" data-action="accept" class="action-btn px-4 py-2 text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition">
+                                            <i class="fas fa-check"></i> Accept
+                                        </button>
+                                        <button data-requestid="${req.id}" data-action="reject" class="action-btn px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 transition">
+                                            <i class="fas fa-times"></i> Reject
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+            notificationArea.classList.remove('hidden');
+
+            // Attach event listeners to the new buttons
+            document.querySelectorAll('.action-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const requestId = e.currentTarget.dataset.requestid;
+                    const action = e.currentTarget.dataset.action;
+                    handleSwapResponse(requestId, action);
+                });
+            });
+
+        } else {
+            notificationArea.classList.add('hidden');
+            notificationArea.innerHTML = '';
+        }
+    }, (error) => {
+        console.error("Error listening for swap requests:", error);
+    });
+}
+
+/**
+ * Listens for the outcome of sent swaps (Accepted/Rejected).
+ */
+function listenForAcceptedSwaps(currentUserId) {
+    // Query for requests where the current user is the sender and the status is finalized (accepted/rejected)
+    const requestsCollectionRef = collection(db, `artifacts/${appId}/public/data/swap_requests`);
+    const q = query(
+        requestsCollectionRef,
+        where("senderId", "==", currentUserId),
+        where("status", "in", ["accepted", "rejected"])
+    );
+
+    onSnapshot(q, async (snapshot) => {
+        snapshot.docChanges().forEach(async (change) => {
+            if (change.type === "modified") {
+                const request = { id: change.doc.id, ...change.doc.data() };
+
+                // Only show notification for new changes, not old ones (re-renders are handled by public directory listener)
+                if (request.status === 'accepted' || request.status === 'rejected') {
+                    
+                    // Prevent showing notification on initial load or if already processed
+                    const isNewChange = change.doc.metadata.hasPendingWrites === false;
+
+                    if (isNewChange && !sessionStorage.getItem(`notified-${request.id}`)) {
+                        
+                        const receiverNameMap = await fetchUserNames([request.receiverId]);
+                        const receiverName = receiverNameMap[request.receiverId] || 'a user';
+                        const statusText = request.status === 'accepted' ? 'accepted' : 'rejected';
+                        const bgColor = request.status === 'accepted' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+
+                        // Display persistent notification
+                        const notificationId = `sender-notif-${request.id}`;
+                        const existingNotif = document.getElementById(notificationId);
+                        if (existingNotif) existingNotif.remove(); // Remove old one if it exists
+
+                        const notifHtml = document.createElement('div');
+                        notifHtml.id = notificationId;
+                        notifHtml.className = `p-4 rounded-lg shadow-md mb-4 ${bgColor} flex justify-between items-center`;
+                        notifHtml.innerHTML = `
+                            <p class="font-medium">Your swap request to <span class="font-bold">${receiverName}</span> was ${statusText}!</p>
+                            <button class="text-sm font-medium hover:underline ml-4" onclick="document.getElementById('${notificationId}').remove(); sessionStorage.setItem('notified-${request.id}', 'true');">
+                                Dismiss
+                            </button>
+                        `;
+
+                        // Prepend the notification to the main content area
+                        const mainContent = document.querySelector('.pt-24.pb-12 .max-w-7xl');
+                        if (mainContent) {
+                             mainContent.prepend(notifHtml);
+                        }
+
+                        // Mark as notified in session storage to prevent re-display on refresh
+                        sessionStorage.setItem(`notified-${request.id}`, 'true');
+                    }
+                }
+            }
+        });
+    }, (error) => {
+        console.error("Error listening for accepted swaps:", error);
+    });
+}
+
+
+/**
+ * Checks the swap status between the current user and a target user.
+ */
+async function checkSwapStatus(targetUserId) {
+    if (!currentUserId) return false;
+
+    // Check for an *accepted* request where the current user is involved as either sender or receiver
+    const requestsCollectionRef = collection(db, `artifacts/${appId}/public/data/swap_requests`);
+    
+    // Check Case 1: Current user sent the request, and it was accepted
+    const q1 = query(
+        requestsCollectionRef,
+        where("senderId", "==", currentUserId),
+        where("receiverId", "==", targetUserId),
+        where("status", "==", "accepted")
+    );
+    
+    // Check Case 2: Current user received the request, and it was accepted
+    const q2 = query(
+        requestsCollectionRef,
+        where("senderId", "==", targetUserId),
+        where("receiverId", "==", currentUserId),
+        where("status", "==", "accepted")
+    );
+
+    const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+
+    return !snap1.empty || !snap2.empty;
+}
+
+// --- Swap Request Button Logic (in User Modal) ---
+
+function showRequestMessage(message, isError = false) {
+    const msgDiv = document.getElementById('swapRequestMessage');
+    if (!msgDiv) return;
+
+    msgDiv.textContent = message;
+    msgDiv.className = isError 
+        ? "p-3 rounded-md text-sm bg-red-100 text-red-700 block transition duration-300" 
+        : "p-3 rounded-md text-sm bg-green-100 text-green-700 block transition duration-300";
+    
+    setTimeout(() => {
+        msgDiv.classList.add('hidden');
+    }, 4000);
+    msgDiv.classList.remove('hidden');
+}
+
+
+if (requestSwapButton) {
+    requestSwapButton.addEventListener('click', async () => {
+        if (!currentUserId) {
+            showRequestMessage("You must be logged in to send a request.", true);
+            return;
+        }
+        if (!currentReceiverId) {
+            showRequestMessage("Error: Could not determine the recipient.", true);
+            return;
+        }
+
+        // --- UI Feedback while sending ---
+        requestSwapButton.disabled = true;
+        requestSwapButton.innerText = "Sending...";
+        
+        try {
+            // Check if a pending request already exists
+            const requestsCollectionRef = collection(db, `artifacts/${appId}/public/data/swap_requests`);
+            const q = query(
+                requestsCollectionRef,
+                where("senderId", "==", currentUserId),
+                where("receiverId", "==", currentReceiverId),
+                where("status", "==", "pending")
+            );
+            
+            const snapshot = await getDocs(q);
+            if (!snapshot.empty) {
+                showRequestMessage("A pending swap request has already been sent to this user.", false);
+                return;
+            }
+
+            // Create the new request document
+            const newRequestRef = doc(requestsCollectionRef);
+            await setDoc(newRequestRef, {
+                senderId: currentUserId,
+                receiverId: currentReceiverId,
+                timestamp: serverTimestamp(),
+                status: 'pending'
+            });
+
+            showRequestMessage("Swap Request Sent Successfully!", false);
+
+        } catch (error) {
+            console.error("Error sending swap request:", error);
+            showRequestMessage("Error sending request. Please try again.", true);
+        } finally {
+            requestSwapButton.disabled = false;
+            requestSwapButton.innerText = "Request Swap";
+        }
+    });
+}
+
+
+// --- User List and Profile Modal Logic ---
 
 /**
  * Fetches the public user directory and renders it.
@@ -53,7 +369,7 @@ function loadUserDirectory(currentUserId) {
     const usersCollectionRef = collection(db, `artifacts/${appId}/public/data/user_directory`);
     const q = query(usersCollectionRef);
 
-    onSnapshot(q, (snapshot) => {
+    onSnapshot(q, async (snapshot) => {
         // --- FIX: Clear the container before re-rendering ---
         userListContainer.innerHTML = ''; 
         
@@ -61,22 +377,38 @@ function loadUserDirectory(currentUserId) {
         snapshot.forEach((doc) => {
             // Add all users EXCEPT the current one
             if (doc.id !== currentUserId) {
-                users.push({ id: doc.id, ...doc.data() });
+                const userData = doc.data();
+                users.push({ id: doc.id, ...userData });
+                usersDirectory[doc.id] = { firstName: userData.firstName, lastName: userData.lastName }; // Cache
             }
         });
 
+        // Use Promise.all to check swap status for all users in parallel
+        const userPromises = users.map(async (user) => {
+            const isSwapped = await checkSwapStatus(user.id);
+            const statusBadge = isSwapped 
+                ? `<span class="ml-auto px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">Swapped</span>`
+                : '';
+
+            return `
+                <button data-userid="${user.id}" class="user-profile-button w-full text-left p-4 bg-white hover:bg-gray-50 rounded-lg shadow transition duration-150 flex items-center space-x-3">
+                    <i class="fas fa-user-circle text-gray-400 text-2xl"></i>
+                    <span class="font-medium text-lg text-primary-600">${user.firstName} ${user.lastName}</span>
+                    ${statusBadge}
+                </button>
+            `;
+        });
+        
+        // Wait for all badges to be determined
+        const userHtml = await Promise.all(userPromises);
+
         // Render the list
-        if (users.length === 0) {
+        if (userHtml.length === 0) {
             userListContainer.innerHTML = `<p class="text-gray-500 col-span-full">No other users have joined yet.</p>`;
             return;
         }
 
-        userListContainer.innerHTML = users.map(user => `
-            <button data-userid="${user.id}" class="user-profile-button w-full text-left p-4 bg-white hover:bg-gray-50 rounded-lg shadow transition duration-150 flex items-center space-x-3">
-                <i class="fas fa-user-circle text-gray-400 text-2xl"></i>
-                <span class="font-medium text-lg text-primary-600">${user.firstName} ${user.lastName}</span>
-            </button>
-        `).join('');
+        userListContainer.innerHTML = userHtml.join('');
 
         // Add click listeners to all the new buttons
         document.querySelectorAll('.user-profile-button').forEach(button => {
@@ -114,15 +446,25 @@ function renderSkillsToModal(container, skills, type = 'offering') {
  * Fetches a specific user's PRIVATE profile and shows it in the modal.
  */
 async function showUserProfile(userId) {
+    // Set receiver ID for the swap button
+    currentReceiverId = userId;
+    
     // 1. Get modal elements
-    const modal = document.getElementById('userModal');
-    const backdrop = document.getElementById('userModalBackdrop');
     const nameEl = document.getElementById('modalUserName');
     const emailEl = document.getElementById('modalUserEmail');
     const bioEl = document.getElementById('modalUserBio');
-    // --- NEW: Get skill containers ---
+    const swapMsgDiv = document.getElementById('swapRequestMessage');
     const skillOfferEl = document.getElementById('modalSkillOfferContainer');
     const skillSeekEl = document.getElementById('modalSkillSeekContainer');
+
+    // Reset message and button state
+    if (swapMsgDiv) swapMsgDiv.classList.add('hidden');
+    if (requestSwapButton) {
+        requestSwapButton.disabled = false;
+        requestSwapButton.innerText = "Request Swap";
+        // Ensure button is visible before conditional checks
+        requestSwapButton.classList.remove('hidden'); 
+    }
 
     // 1b. Show modal with loading state
     nameEl.innerText = "Loading...";
@@ -131,22 +473,18 @@ async function showUserProfile(userId) {
     if (skillOfferEl) skillOfferEl.innerHTML = `<p class="text-gray-500 text-sm">Loading skills...</p>`;
     if (skillSeekEl) skillSeekEl.innerHTML = `<p class="text-gray-500 text-sm">Loading skills...</p>`;
     
-    backdrop.classList.remove('hidden');
-    modal.classList.remove('hidden');
+    userModalBackdrop.classList.remove('hidden');
+    userModal.classList.remove('hidden');
 
-    // 2. Fetch the user's *PUBLIC* profile data (which has skills)
-    // We fetch from the public directory since firebaseauth.js saves skills there.
-    const userDocRef = doc(db, `artifacts/${appId}/public/data/user_directory`, userId);
-    
-    // We also need the *private* doc to get the email
+    // 2. Fetch the user's *PUBLIC* and *PRIVATE* profile data 
+    const publicDocRef = doc(db, `artifacts/${appId}/public/data/user_directory`, userId);
     const privateDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/info`);
 
     try {
-        const publicDoc = await getDoc(userDocRef);
-        const privateDoc = await getDoc(privateDocRef);
+        const [publicDoc, privateDoc] = await Promise.all([getDoc(publicDocRef), getDoc(privateDocRef)]);
 
         if (!publicDoc.exists() || !privateDoc.exists()) {
-            console.error("No profile data found for this user.");
+            console.error("No complete profile data found for this user.");
             nameEl.innerText = "Error";
             bioEl.innerText = "Could not load user profile.";
             emailEl.innerText = "N/A";
@@ -158,12 +496,42 @@ async function showUserProfile(userId) {
 
         // 3. Populate modal
         nameEl.innerText = `${publicData.firstName} ${publicData.lastName}`;
-        emailEl.innerText = privateData.email; // Email comes from private doc
+        emailEl.innerText = privateData.email || 'N/A'; // Email comes from private doc
         bioEl.innerText = privateData.bio || "This user has not set a bio."; // Bio comes from private doc
 
-        // --- NEW: Render skills ---
+        // --- Render skills ---
         renderSkillsToModal(skillOfferEl, publicData.skillsOffering, 'offering');
         renderSkillsToModal(skillSeekEl, publicData.skillsSeeking, 'seeking');
+
+        // --- NEW: Check if already swapped ---
+        const isSwapped = await checkSwapStatus(userId);
+        
+        if (isSwapped) {
+            if (requestSwapButton) {
+                requestSwapButton.classList.add('hidden'); // Hide the button
+                showRequestMessage("You have successfully exchanged skills with this user. Swapped!", false);
+            }
+            return; // Stop processing further checks like pending requests
+        }
+
+        // 4. Check if a pending request already exists to disable the button
+        const requestsCollectionRef = collection(db, `artifacts/${appId}/public/data/swap_requests`);
+        const q = query(
+            requestsCollectionRef,
+            where("senderId", "==", currentUserId),
+            where("receiverId", "==", userId),
+            where("status", "==", "pending")
+        );
+        const pendingSnap = await getDocs(q);
+        
+        if (!pendingSnap.empty) {
+            if (requestSwapButton) {
+                requestSwapButton.disabled = true;
+                requestSwapButton.innerText = "Pending Request Sent";
+                showRequestMessage("You have a pending request with this user.", false);
+            }
+        }
+
 
     } catch (error) {
         console.error("Error fetching user profile:", error);
@@ -177,17 +545,14 @@ async function showUserProfile(userId) {
  * Sets up listeners to close the modal.
  */
 function setupModalClose() {
-    const modal = document.getElementById('userModal');
-    const backdrop = document.getElementById('userModalBackdrop');
-    const closeBtn = document.getElementById('closeUserModal');
-
     const closeModal = () => {
-        backdrop.classList.add('hidden');
-        modal.classList.add('hidden');
+        userModalBackdrop.classList.add('hidden');
+        userModal.classList.add('hidden');
     };
 
+    const closeBtn = document.getElementById('closeUserModal');
     if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (backdrop) backdrop.addEventListener('click', closeModal);
+    if (userModalBackdrop) userModalBackdrop.addEventListener('click', closeModal);
 }
 
 
@@ -197,12 +562,10 @@ function setupModalClose() {
 
   if (user) {
     // The user is signed in.
-    const userId = user.uid; 
-    console.log("Dashboard: User is logged in. Fetching data for UID:", userId);
-
-    // --- Create a reference to the user's document using the correct path ---
-    const docRef = doc(db, `artifacts/${appId}/users/${userId}/profile/info`); 
-
+    currentUserId = user.uid; 
+    
+    // --- Initial Welcome Message ---
+    const docRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile/info`); 
     getDoc(docRef)
       .then((docSnap) => {
         if (docSnap.exists()) {
@@ -211,23 +574,24 @@ function setupModalClose() {
           if (welcomeEl) {
              welcomeEl.innerText = `Welcome, ${userData.firstName || 'User'}!`;
           }
-        } else {
-          console.error("Dashboard: User is authenticated, but no matching profile document was found.");
-          const welcomeEl = document.getElementById('welcomeMessage');
-          if (welcomeEl) {
-             welcomeEl.innerText = `Welcome! We couldn't find your profile.`;
-          }
-        }
+        } 
       })
       .catch((error) => {
-        console.error("Error getting document:", error);
+        console.error("Error getting user document:", error);
       });
       
-    // --- NEW: Load the user directory ---
-    loadUserDirectory(userId);
-    
-    // --- NEW: Setup modal close buttons ---
+    // --- Load Features ---
+    loadUserDirectory(currentUserId);
+    listenForSwapRequests(currentUserId); // Incoming pending requests
+    listenForAcceptedSwaps(currentUserId); // Outgoing accepted/rejected requests
     setupModalClose();
+    
+    // --- Toggle Notification Area Listener ---
+    if (notificationBell) {
+        notificationBell.addEventListener('click', () => {
+            notificationArea.classList.toggle('hidden');
+        });
+    }
 
 
   } else {
@@ -238,14 +602,12 @@ function setupModalClose() {
 })(); // Immediately invoke the async function
 
 
-// --- Logout Button Logic ---
-const logoutButton = document.getElementById('logout');
+// --- Logout Button Listener ---
 if (logoutButton) {
     logoutButton.addEventListener('click', () => {
       signOut(auth)
         .then(() => {
           console.log("Sign-out successful.");
-          // After sign out, redirect to index.html
           window.location.href = 'index.html'; 
         })
         .catch((error) => {
@@ -253,4 +615,3 @@ if (logoutButton) {
         });
     });
 }
-
