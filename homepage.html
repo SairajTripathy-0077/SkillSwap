@@ -145,9 +145,33 @@
                     <p id="loggedUserBio" class="text-xl text-gray-900 p-3 bg-gray-50 rounded-md mt-1 min-h-[80px]">Loading...</p>
                 </div>
                 
+                <!-- NEW: Verification Links Section -->
+                <div>
+                    <label class="text-sm font-semibold text-gray-500 uppercase">Verification Links</label>
+                    <div id="linksContainer" class="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0 p-3 bg-gray-50 rounded-md mt-1">
+                        <!-- LinkedIn Link -->
+                        <a id="profileLinkedIn" href="#" target="_blank" rel="noopener noreferrer" class="hidden items-center text-gray-700 hover:text-primary-600 transition duration-150">
+                            <i class="fab fa-linkedin text-xl mr-2 text-[#0077B5]"></i>
+                            <span class="font-medium">LinkedIn</span>
+                        </a>
+                        <!-- GitHub Link -->
+                        <a id="profileGitHub" href="#" target="_blank" rel="noopener noreferrer" class="hidden items-center text-gray-700 hover:text-gray-900 transition duration-150">
+                            <i class="fab fa-github text-xl mr-2 text-[#333]"></i>
+                            <span class="font-medium">GitHub</span>
+                        </a>
+                        <!-- Portfolio Link -->
+                        <a id="profilePortfolio" href="#" target="_blank" rel="noopener noreferrer" class="hidden items-center text-gray-700 hover:text-secondary-600 transition duration-150">
+                            <i class="fas fa-globe text-xl mr-2 text-secondary-500"></i>
+                            <span class="font-medium">Youtube</span>
+                        </a>
+                        <!-- Fallback Message -->
+                        <p id="noLinksMessage" class="text-gray-500 text-sm">No verification links provided.</p>
+                    </div>
+                </div>
+                <!-- END NEW SECTION -->
+
                 <!-- My Skills Card -->
                 <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <h3 class="text-xl font-bold text-gray-800 mb-4">Skills I Manage</h3>
                     
                     <!-- Skills I Offer -->
                     <div class="mb-4">
@@ -218,6 +242,25 @@
                     <textarea id="editBio" rows="4" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="e.g., I offer guitar lessons and want to learn Spanish."></textarea>
                 </div>
             </div>
+
+            <!-- NEW: Edit Links -->
+            <hr>
+            <h3 class="text-lg font-semibold text-gray-700">Verification Links</h3>
+            <div class="space-y-4">
+                <div>
+                    <label for="editLinkedIn" class="block text-sm font-semibold text-gray-600 uppercase mb-1"><i class="fab fa-linkedin text-[#0077B5] mr-1"></i> LinkedIn URL</label>
+                    <input type="url" id="editLinkedIn" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="https://linkedin.com/in/your-profile">
+                </div>
+                <div>
+                    <label for="editGitHub" class="block text-sm font-semibold text-gray-600 uppercase mb-1"><i class="fab fa-github text-[#333] mr-1"></i> GitHub URL</label>
+                    <input type="url" id="editGitHub" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="https://github.com/your-username">
+                </div>
+                <div>
+                    <label for="editPortfolio" class="block text-sm font-semibold text-gray-600 uppercase mb-1"><i class="fas fa-globe text-secondary-500 mr-1"></i> Portfolio URL</label>
+                    <input type="url" id="editPortfolio" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="https://your-website.com">
+                </div>
+            </div>
+            <!-- END NEW -->
 
             <hr>
             
@@ -300,3 +343,4 @@
     <script type="module" src="homepage.js"></script>
 </body>
 </html>
+

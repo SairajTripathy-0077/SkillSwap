@@ -51,6 +51,13 @@ const page = {
     editProfileBtn: document.getElementById('editProfileButton'),
     skillOfferContainer: document.getElementById('profileSkillOfferContainer'),
     skillSeekContainer: document.getElementById('profileSkillSeekContainer'),
+    // --- NEW Link Elements ---
+    linksContainer: document.getElementById('linksContainer'),
+    profileLinkedIn: document.getElementById('profileLinkedIn'),
+    profileGitHub: document.getElementById('profileGitHub'),
+    profilePortfolio: document.getElementById('profilePortfolio'),
+    noLinksMessage: document.getElementById('noLinksMessage'),
+    // --- END NEW ---
     // Delete Account Refs
     deleteAccountBtn: document.getElementById('deleteAccountBtn'),
     deleteModal: document.getElementById('deleteAccountModal'),
@@ -77,6 +84,11 @@ const modal = {
     skillSeekInput: document.getElementById('modalSkillSeekInput'),
     addSkillSeekBtn: document.getElementById('modalAddSkillSeekBtn'),
     skillSeekContainer: document.getElementById('modalSkillSeekContainer'),
+    // --- NEW Link Inputs ---
+    linkedIn: document.getElementById('editLinkedIn'),
+    gitHub: document.getElementById('editGitHub'),
+    portfolio: document.getElementById('editPortfolio'),
+    // --- END NEW ---
 };
 
 /**
@@ -119,6 +131,54 @@ function updateProfilePage(data) {
     if (page.email) page.email.innerText = data.email || 'N/A';
     if (page.bio) page.bio.innerText = data.bio || 'No bio provided.';
     
+    // --- NEW: Update Links ---
+    const linkedIn = data.linkedIn || '';
+    const gitHub = data.gitHub || '';
+    const portfolio = data.portfolio || '';
+    let hasLinks = false;
+
+    if (page.profileLinkedIn) {
+        if (linkedIn) {
+            page.profileLinkedIn.href = linkedIn;
+            page.profileLinkedIn.classList.remove('hidden');
+            page.profileLinkedIn.classList.add('inline-flex'); // Use inline-flex to align icon
+            hasLinks = true;
+        } else {
+            page.profileLinkedIn.classList.add('hidden');
+            page.profileLinkedIn.classList.remove('inline-flex');
+        }
+    }
+    
+    if (page.profileGitHub) {
+        if (gitHub) {
+            page.profileGitHub.href = gitHub;
+            page.profileGitHub.classList.remove('hidden');
+            page.profileGitHub.classList.add('inline-flex');
+            hasLinks = true;
+        } else {
+            page.profileGitHub.classList.add('hidden');
+            page.profileGitHub.classList.remove('inline-flex');
+        }
+    }
+    
+    if (page.profilePortfolio) {
+        if (portfolio) {
+            page.profilePortfolio.href = portfolio;
+            page.profilePortfolio.classList.remove('hidden');
+            page.profilePortfolio.classList.add('inline-flex');
+            hasLinks = true;
+        } else {
+            page.profilePortfolio.classList.add('hidden');
+            page.profilePortfolio.classList.remove('inline-flex');
+        }
+    }
+
+    // Show/hide the fallback message
+    if (page.noLinksMessage) {
+        page.noLinksMessage.classList.toggle('hidden', hasLinks);
+    }
+    // --- END NEW ---
+
     renderProfileSkills(data.skillsOffering, data.skillsSeeking);
 }
 
@@ -188,6 +248,11 @@ function openEditModal() {
     if (modal.fName) modal.fName.value = userProfileData.firstName || '';
     if (modal.lName) modal.lName.value = userProfileData.lastName || '';
     if (modal.bio) modal.bio.value = userProfileData.bio || '';
+    // --- NEW ---
+    if (modal.linkedIn) modal.linkedIn.value = userProfileData.linkedIn || '';
+    if (modal.gitHub) modal.gitHub.value = userProfileData.gitHub || '';
+    if (modal.portfolio) modal.portfolio.value = userProfileData.portfolio || '';
+    // --- END NEW ---
 
     // 2. Pre-fill skill arrays for the modal
     modalSkillsOffering = [...(userProfileData.skillsOffering || [])];
@@ -238,6 +303,11 @@ async function saveProfileChanges() {
     const newFirstName = modal.fName.value.trim();
     const newLastName = modal.lName.value.trim();
     const newBio = modal.bio.value.trim();
+    // --- NEW ---
+    const newLinkedIn = modal.linkedIn.value.trim();
+    const newGitHub = modal.gitHub.value.trim();
+    const newPortfolio = modal.portfolio.value.trim();
+    // --- END NEW ---
     
     // 2. Validate
     if (!newFirstName || !newLastName || !newBio) {
@@ -252,14 +322,24 @@ async function saveProfileChanges() {
         lastName: newLastName, 
         bio: newBio,
         skillsOffering: modalSkillsOffering,
-        skillsSeeking: modalSkillsSeeking
+        skillsSeeking: modalSkillsSeeking,
+        // --- NEW ---
+        linkedIn: newLinkedIn,
+        gitHub: newGitHub,
+        portfolio: newPortfolio
+        // --- END NEW ---
     };
     
     const publicData = { 
         firstName: newFirstName, 
         lastName: newLastName,
         skillsOffering: modalSkillsOffering,
-        skillsSeeking: modalSkillsSeeking
+        skillsSeeking: modalSkillsSeeking,
+        // --- NEW ---
+        linkedIn: newLinkedIn,
+        gitHub: newGitHub,
+        portfolio: newPortfolio
+        // --- END NEW ---
     };
 
     const privateDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile/info`);
@@ -392,6 +472,7 @@ onAuthStateChanged(auth, (user) => {
                     bio: 'Profile document missing. Please edit profile to save your details.', 
                     skillsOffering: [], 
                     skillsSeeking: []
+                    // Links will be treated as empty/undefined and show the fallback
                 });
             }
         }, (error) => {
@@ -474,3 +555,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+

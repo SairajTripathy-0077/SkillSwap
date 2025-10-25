@@ -203,8 +203,34 @@
                 <p id="modalUserBio" class="text-lg text-gray-900 p-2 bg-gray-50 rounded-md mt-1 min-h-[60px]">Loading...</p>
             </div>
 
+            <!-- Verification Links Section -->
+            <div>
+                <label class="text-sm font-semibold text-gray-500 uppercase">Verification Links</label>
+                <div id="modalLinksContainer" class="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0 p-3 bg-gray-50 rounded-md mt-1">
+                    <!-- LinkedIn Link -->
+                    <a id="modalProfileLinkedIn" href="#" target="_blank" rel="noopener noreferrer" class="hidden items-center text-gray-700 hover:text-primary-600 transition duration-150">
+                        <i class="fab fa-linkedin text-xl mr-2 text-[#0077B5]"></i>
+                        <span class="font-medium">LinkedIn</span>
+                    </a>
+                    <!-- GitHub Link -->
+                    <a id="modalProfileGitHub" href="#" target="_blank" rel="noopener noreferrer" class="hidden items-center text-gray-700 hover:text-gray-900 transition duration-150">
+                        <i class="fab fa-github text-xl mr-2 text-[#333]"></i>
+                        <span class="font-medium">GitHub</span>
+                    </a>
+                    <!-- Portfolio Link (Reverted) -->
+                    <a id="modalProfilePortfolio" href="#" target="_blank" rel="noopener noreferrer" class="hidden items-center text-gray-700 hover:text-primary-600 transition duration-150">
+                        <i class="fas fa-link text-xl mr-2 text-gray-500"></i>
+                        <span class="font-medium">Youtube</span>
+                    </a>
+                    <!-- Fallback Message -->
+                    <p id="modalNoLinksMessage" class="text-gray-500 text-sm">No verification links provided.</p>
+                </div>
+            </div>
+            <!-- END Verification Links Section -->
+
+
             <!-- Skills I Offer -->
-            <hr>
+            <hr class="mt-4">
             <div>
                 <h3 class="text-lg font-semibold text-gray-800 mb-2">
                     <i class="fas fa-chalkboard-teacher text-primary-500 mr-2"></i>Skills I Offer
@@ -239,3 +265,4 @@
     <script type="module" src="dashboard.js"></script>
 </body>
 </html>
+

@@ -546,18 +546,26 @@ function loadUserDirectory(currentUserId) {
                 ? `<span class="ml-auto px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">Swapped</span>`
                 : '';
 
-            // Render primary skill
+            // --- MODIFICATION: Render skill pills (Offering) ---
             const skills = user.skillsOffering || [];
-            const primarySkill = skills.length > 0 ? `<p class="text-xs text-gray-500 mt-1">Offers: ${skills[0]}</p>` : '';
+            // We use the existing 'skill-pill' class but override the padding/font size with Tailwind's '!' modifier to make them smaller for the card.
+            const skillsHtml = skills.length > 0
+                ? `<div class="flex flex-wrap gap-1 mt-2">
+                     ${skills.map(skill => 
+                        `<span class="skill-pill !text-xs !font-medium !py-0.5 !px-2">${skill}</span>`
+                     ).join('')}
+                   </div>`
+                : '<p class="text-xs text-gray-500 mt-1">No skills offered.</p>'; // Fallback
+            // --- END MODIFICATION ---
 
             return `
-                <button data-userid="${user.id}" class="user-profile-button w-full text-left p-4 bg-white hover:bg-gray-50 rounded-lg shadow transition duration-150 flex flex-col items-start space-y-1">
+                <button data-userid="${user.id}" class="user-profile-button w-full text-left p-4 bg-white hover:bg-gray-50 rounded-lg shadow transition duration-150 flex flex-col items-start">
                     <div class="flex w-full items-center">
                         <i class="fas fa-user-circle text-gray-400 text-2xl mr-3"></i>
                         <span class="font-medium text-lg text-primary-600">${user.firstName} ${user.lastName}</span>
                         ${statusBadge}
                     </div>
-                    ${primarySkill}
+                    ${skillsHtml}
                 </button>
             `;
         });
@@ -619,6 +627,12 @@ async function showUserProfile(userId) {
     const swapMsgDiv = document.getElementById('swapRequestMessage');
     const skillOfferEl = document.getElementById('modalSkillOfferContainer');
     const skillSeekEl = document.getElementById('modalSkillSeekContainer');
+    // --- NEW: Link Elements ---
+    const linkedInEl = document.getElementById('modalProfileLinkedIn');
+    const gitHubEl = document.getElementById('modalProfileGitHub');
+    const portfolioEl = document.getElementById('modalProfilePortfolio'); // Reverted from YouTube
+    const noLinksEl = document.getElementById('modalNoLinksMessage');
+    // --- END NEW ---
 
     // Reset message and button state
     if (swapMsgDiv) swapMsgDiv.classList.add('hidden');
@@ -635,6 +649,12 @@ async function showUserProfile(userId) {
     bioEl.innerText = "Loading...";
     if (skillOfferEl) skillOfferEl.innerHTML = `<p class="text-gray-500 text-sm">Loading skills...</p>`;
     if (skillSeekEl) skillSeekEl.innerHTML = `<p class="text-gray-500 text-sm">Loading skills...</p>`;
+    // --- NEW: Reset Links ---
+    if (linkedInEl) linkedInEl.classList.add('hidden');
+    if (gitHubEl) gitHubEl.classList.add('hidden');
+    if (portfolioEl) portfolioEl.classList.add('hidden'); // Reverted from YouTube
+    if (noLinksEl) noLinksEl.classList.remove('hidden'); // Show "no links" by default
+    // --- END NEW ---
     
     userModalBackdrop.classList.remove('hidden');
     userModal.classList.remove('hidden');
@@ -661,6 +681,51 @@ async function showUserProfile(userId) {
         nameEl.innerText = `${publicData.firstName} ${publicData.lastName}`;
         emailEl.innerText = privateData.email || 'N/A'; // Email comes from private doc
         bioEl.innerText = privateData.bio || "This user has not set a bio."; // Bio comes from private doc
+
+        // --- NEW: Populate Links ---
+        // We read from publicData for speed and since these links are public-facing
+        const linkedIn = publicData.linkedIn || '';
+        const gitHub = publicData.gitHub || '';
+        const portfolio = publicData.portfolio || ''; // Reverted from YouTube
+        let hasLinks = false;
+
+        if (linkedInEl) {
+            if (linkedIn) {
+                linkedInEl.href = linkedIn;
+                linkedInEl.classList.remove('hidden');
+                linkedInEl.classList.add('inline-flex');
+                hasLinks = true;
+            } else {
+                linkedInEl.classList.add('hidden');
+                linkedInEl.classList.remove('inline-flex');
+            }
+        }
+        if (gitHubEl) {
+            if (gitHub) {
+                gitHubEl.href = gitHub;
+                gitHubEl.classList.remove('hidden');
+                gitHubEl.classList.add('inline-flex');
+                hasLinks = true;
+            } else {
+                gitHubEl.classList.add('hidden');
+                gitHubEl.classList.remove('inline-flex');
+            }
+        }
+        if (portfolioEl) { // Reverted from YouTube
+            if (portfolio) { // Reverted from YouTube
+                portfolioEl.href = portfolio; // Reverted from YouTube
+                portfolioEl.classList.remove('hidden');
+                portfolioEl.classList.add('inline-flex');
+                hasLinks = true;
+            } else {
+                portfolioEl.classList.add('hidden');
+                portfolioEl.classList.remove('inline-flex');
+            }
+        }
+        if (noLinksEl) {
+            noLinksEl.classList.toggle('hidden', hasLinks);
+        }
+        // --- END NEW ---
 
         // --- Render skills ---
         renderSkillsToModal(skillOfferEl, publicData.skillsOffering, 'offering');
@@ -798,3 +863,4 @@ if (logoutButton) {
         });
     });
 }
+

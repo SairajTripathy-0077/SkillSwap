@@ -158,6 +158,11 @@ if (signUpButton) {
         const firstName = document.getElementById('fName').value;
         const lastName = document.getElementById('lName').value;
         const bio = document.getElementById('rBio').value;
+
+        // --- NEW: Get social link values ---
+        const linkedIn = document.getElementById('rLinkedIn').value.trim();
+        const gitHub = document.getElementById('rGitHub').value.trim();
+        const portfolio = document.getElementById('rPortfolio').value.trim();
         
         // --- MODIFIED: Get skills from arrays ---
         // (The skillsOffering and skillsSeeking arrays are already up-to-date)
@@ -180,7 +185,11 @@ if (signUpButton) {
                     lastName: lastName,
                     bio: bio,
                     skillsOffering: skillsOffering, // Use the array
-                    skillsSeeking: skillsSeeking   // Use the array
+                    skillsSeeking: skillsSeeking,   // Use the array
+                    // --- NEW: Add links to private data ---
+                    linkedIn: linkedIn,
+                    gitHub: gitHub,
+                    portfolio: portfolio
                 };
                 
                 // 4. Define the PUBLIC user directory data
@@ -188,7 +197,11 @@ if (signUpButton) {
                     firstName: firstName,
                     lastName: lastName,
                     skillsOffering: skillsOffering, // Use the array
-                    skillsSeeking: skillsSeeking   // Use the array
+                    skillsSeeking: skillsSeeking,   // Use the array
+                    // --- NEW: Add links to public data ---
+                    linkedIn: linkedIn,
+                    gitHub: gitHub,
+                    portfolio: portfolio
                 };
 
                 // 5. Set up document references
