@@ -3,52 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Homepage</title>
-    <style>
-        body{
-            padding:30px;
-            background:linear-gradient(to right, #e2e2e2, #c9d6ff);
+    <title>My Profile - Skill Swap</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Configure Tailwind for Inter font -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                     colors: {
+                        'primary': {
+                            500: '#3b82f6', // Blue-500
+                            600: '#2563eb',
+                        },
+                    },
+                }
+            }
         }
-        h1{
-            text-align:center;
-
-        }
-        button{
-            color:blueviolet;
-            background-color:#c9d6ff;
-            padding:5px;
-            border-radius:5px;
-            font-size:1rem;
-            font-weight:bold;
-            border:none;
-        }
-        button:hover{
-            text-decoration: underline;
-            color:blue;
-        }
-        button, div{
-            margin-left:15%;
-            font-size:20px;
-            padding:10px;
-        }
-        div{
-            font-weight:400;
-            color:rgb(12,11,11);
-
-        }
-        span{
-            font-weight:600;
-            font-size:22px;
-            color:black;
-        }
-    </style>
-    <script type="module" src="./homepage.js"></script>
+    </script>
 </head>
-<body>
-    <h1>Welcome to the Homepage</h1>
-    <div>First Name: <span id="loggedUserFName"></span></div>
-    <div>Last Name: <span id="loggedUserLName"></span></div>
-    <div>Email: <span id="loggedUserEmail"></span></div>
-    <button id="logout">Logout</button>
+<body class="bg-gray-100 font-sans">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md w-full top-0 left-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <a href="dashboard.html" class="flex items-center space-x-2">
+                    <i class="fas fa-handshake text-primary-500 text-2xl"></i>
+                    <span class="text-2xl font-bold text-gray-900">Skill Swap</span>
+                </a>
+                
+                <!-- Right Side Icons -->
+                <div class="flex items-center space-x-5">
+                     <!-- Dashboard Button -->
+                     <a href="dashboard.html" title="Back to Dashboard" class="text-gray-600 hover:text-primary-500 transition duration-150">
+                        <i class="fas fa-home text-2xl"></i>
+                     </a>
+                     <!-- Logout Button -->
+                     <button id="logout" title="Logout" class="flex items-center space-x-2 text-gray-600 hover:text-red-500 font-medium transition duration-150">
+                        <i class="fas fa-sign-out-alt text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="min-h-screen flex items-center justify-center pt-16">
+        <div class="bg-white shadow-xl rounded-lg w-full max-w-2xl mx-4 my-8 p-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-6 text-center">My Profile</h1>
+            
+            <div class="space-y-4">
+                <!-- First Name -->
+                <div class="p-4 border border-gray-200 rounded-lg">
+                    <label class="text-sm font-medium text-gray-500">First Name</label>
+                    <div id="loggedUserFName" class="text-lg font-semibold text-gray-900">Loading...</div>
+                </div>
+                
+                <!-- Last Name -->
+                <div class="p-4 border border-gray-200 rounded-lg">
+                    <label class="text-sm font-medium text-gray-500">Last Name</label>
+                    <div id="loggedUserLName" class="text-lg font-semibold text-gray-900">Loading...</div>
+                </div>
+                
+                <!-- Email -->
+                <div class="p-4 border border-gray-200 rounded-lg">
+                    <label class="text-sm font-medium text-gray-500">Email</label>
+                    <div id="loggedUserEmail" class="text-lg font-semibold text-gray-900">Loading...</div>
+                </div>
+
+                <!-- Bio -->
+                <div class="p-4 border border-gray-200 rounded-lg">
+                    <label class="text-sm font-medium text-gray-500">My Bio</label>
+                    <p id="loggedUserBio" class="text-lg text-gray-800 mt-1">Loading...</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- This script fetches data and handles logout -->
+    <script type="module" src="./homepage.js"></script>
 </body>
 </html>
+
