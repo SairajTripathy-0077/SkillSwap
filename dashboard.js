@@ -12,7 +12,8 @@ import {
     setDoc, // Used for creating swap requests
     where,
     updateDoc, // Used for updating swap requests
-    getDocs // Used for checking existing pending requests
+    getDocs, // Used for checking existing pending requests
+    deleteDoc // --- NEW: Added for deleting chat rooms ---
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Use your specific Firebase Config ---
@@ -348,23 +349,37 @@ function loadSwappedUsersForDropdown(currentUserId) {
             return;
         }
 
-        swappedUsersDropdownMenu.innerHTML += swappedUsers.map(user => `
-            <button data-userid="${user.id}" data-action="view" class="dropdown-profile-button flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition">
-                <i class="fas fa-handshake text-secondary-500 mr-3"></i>
-                ${user.firstName} ${user.lastName}
-                <i data-palid="${user.id}" data-action="remove" class="remove-swap-btn fas fa-minus-circle text-error-red-600 ml-auto hover:text-red-800"></i>
-            </button>
-        `).join('');
+        // --- UPDATED to include chat and remove icons ---
+        swappedUsersDropdownMenu.innerHTML += swappedUsers.map(user => {
+            // --- CHANGE 1: Get full name here ---
+            const fullName = `${user.firstName} ${user.lastName}`;
+            return `
+            <div class="dropdown-item-container group flex items-center justify-between w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition">
+                <button data-userid="${user.id}" data-action="view" class="dropdown-profile-button flex-1 flex items-center min-w-0">
+                    <i class="fas fa-handshake text-secondary-500 mr-3"></i>
+                    <span class="truncate">${fullName}</span>
+                </button>
+                <div class="flex items-center pl-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <!-- Chat Link -->
+                    <a href="chat.html?userId=${user.id}" class="chat-buddy-link p-1 text-gray-500 hover:text-primary-500" title="Chat">
+                        <i class="fas fa-comments"></i>
+                    </a>
+                    <!-- Remove Button -->
+                    <!-- CHANGE 2: Add data-palname attribute -->
+                    <button data-palid="${user.id}" data-palname="${fullName}" data-action="remove" class="remove-swap-btn p-1 text-gray-500 hover:text-error-red-600" title="Remove Swap">
+                        <i class="fas fa-minus-circle"></i>
+                    </button>
+                </div>
+            </div>
+        `}).join('');
+
 
         // 3. Add click listeners to open the user profile modal
         document.querySelectorAll('.dropdown-profile-button').forEach(button => {
             button.addEventListener('click', (e) => {
                 e.stopPropagation(); // Stop click from immediately closing dropdown
-                // Only process if the click wasn't on the remove button
-                if (!e.target.classList.contains('remove-swap-btn')) {
-                    showUserProfile(button.dataset.userid);
-                    if (swappedUsersDropdownMenu) swappedUsersDropdownMenu.classList.add('hidden'); // Close dropdown after selection
-                }
+                showUserProfile(button.dataset.userid);
+                if (swappedUsersDropdownMenu) swappedUsersDropdownMenu.classList.add('hidden'); // Close dropdown after selection
             });
         });
         
@@ -372,9 +387,11 @@ function loadSwappedUsersForDropdown(currentUserId) {
         document.querySelectorAll('.remove-swap-btn').forEach(button => {
             button.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const palId = e.target.dataset.palid;
+                // --- CHANGE 3: Read from data attributes on e.currentTarget ---
+                const palId = e.currentTarget.dataset.palid;
+                const palName = e.currentTarget.dataset.palname;
                 // Confirm action before removal
-                if (confirm(`Are you sure you want to remove ${usersDirectory[palId].firstName} ${usersDirectory[palId].lastName} from your swapped list?`)) {
+                if (confirm(`Are you sure you want to remove ${palName} from your swapped list? This will also delete your chat history.`)) {
                     handleRemoveSwap(palId);
                 }
             });
@@ -387,9 +404,51 @@ function loadSwappedUsersForDropdown(currentUserId) {
     });
 }
 
+/**
+ * --- NEW FUNCTION ---
+ * Deletes all messages in a chat room and the chat room document itself.
+ */
+async function deleteChatRoom(palId) {
+    if (!currentUserId || !palId) return;
+
+    console.log(`Attempting to delete chat room with: ${palId}`);
+    const chatRoomId = [currentUserId, palId].sort().join('_');
+    const messagesRef = collection(db, `artifacts/${appId}/public/data/chat_rooms/${chatRoomId}/messages`);
+    const chatRoomDocRef = doc(db, `artifacts/${appId}/public/data/chat_rooms`, chatRoomId);
+
+    try {
+        // 1. Get all messages in the subcollection
+        const messagesSnapshot = await getDocs(messagesRef);
+        if (messagesSnapshot.empty) {
+            console.log("No messages to delete.");
+        } else {
+             // 2. Create deletion promises for all messages
+            const deletePromises = [];
+            messagesSnapshot.forEach((doc) => {
+                deletePromises.push(deleteDoc(doc.ref));
+            });
+            
+            // 3. Wait for all messages to be deleted
+            await Promise.all(deletePromises);
+            console.log(`Deleted ${deletePromises.length} messages.`);
+        }
+
+        // 4. Delete the parent chat room document (if it exists)
+        await deleteDoc(chatRoomDocRef).catch(err => {
+            console.warn("Could not delete parent chat room doc (it may not have existed):", err.message);
+        });
+        console.log(`Attempted deletion of parent chat room doc: ${chatRoomId}`);
+
+    } catch (error) {
+        console.error("Error deleting chat room:", error);
+        // Don't alert the user, just log it. The main swap removal is more important.
+    }
+}
+
 
 /**
- * NEW FUNCTION: Removes an accepted swap relationship by setting status to 'removed'.
+ * --- MODIFIED FUNCTION ---
+ * Removes an accepted swap relationship AND deletes the chat history.
  */
 async function handleRemoveSwap(palId) {
     if (!currentUserId || !palId) return;
@@ -416,17 +475,22 @@ async function handleRemoveSwap(palId) {
         // We only expect one document to match
         const docToUpdate = snapshot.docs[0]; 
         
+        // 1. Update the swap request to 'removed'
         await updateDoc(docToUpdate.ref, {
             status: 'removed', // Set status to 'removed'
             removedBy: currentUserId, // Optional: log who removed it
             removedAt: serverTimestamp()
         });
+        
+        // 2. --- NEW --- Delete the associated chat room
+        console.log("Swap connection removed. Now deleting chat room...");
+        await deleteChatRoom(palId); // <-- CALL THE NEW FUNCTION
 
-        alert("Swap connection successfully removed.");
+        alert("Swap connection and chat history successfully removed.");
         // The onSnapshot listener will automatically refresh the dropdown and the main user list.
 
     } catch (error) {
-        console.error("Error removing swap connection:", error);
+        console.error("Error removing swap connection/chat:", error);
         alert("Error removing swap connection. Please try again.");
     }
 }
@@ -551,9 +615,10 @@ function loadUserDirectory(currentUserId) {
             // We use the existing 'skill-pill' class but override the padding/font size with Tailwind's '!' modifier to make them smaller for the card.
             const skillsHtml = skills.length > 0
                 ? `<div class="flex flex-wrap gap-1 mt-2">
-                     ${skills.map(skill => 
+                     ${skills.slice(0, 3).map(skill => // Only show first 3 skills
                         `<span class="skill-pill !text-xs !font-medium !py-0.5 !px-2">${skill}</span>`
                      ).join('')}
+                     ${skills.length > 3 ? `<span class="text-xs text-gray-500 mt-1 ml-1">+${skills.length - 3} more</span>` : ''}
                    </div>`
                 : '<p class="text-xs text-gray-500 mt-1">No skills offered.</p>'; // Fallback
             // --- END MODIFICATION ---
@@ -613,6 +678,55 @@ function renderSkillsToModal(container, skills, type = 'offering') {
     ).join('');
 }
 
+
+/**
+ * Renders verification links into the modal.
+ */
+function renderLinksToModal(container, links) {
+    if (!container) return;
+    
+    const { linkedIn, gitHub, portfolio } = links;
+    let hasLinks = false;
+    let html = '';
+
+    if (linkedIn) {
+        hasLinks = true;
+        html += `
+            <a href="${linkedIn}" target="_blank" rel="noopener noreferrer" class="flex items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                <i class="fab fa-linkedin text-xl text-[#0077B5] w-6 text-center"></i>
+                <span class="ml-2 text-sm font-medium text-gray-700 truncate">${linkedIn.replace('https://www.', '')}</span>
+            </a>
+        `;
+    }
+    if (gitHub) {
+        hasLinks = true;
+        html += `
+            <a href="${gitHub}" target="_blank" rel="noopener noreferrer" class="flex items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                <i class="fab fa-github text-xl text-[#333] w-6 text-center"></i>
+                <span class="ml-2 text-sm font-medium text-gray-700 truncate">${gitHub.replace('https://www.', '')}</span>
+            </a>
+        `;
+    }
+    if (portfolio) {
+        hasLinks = true;
+        html += `
+            <a href="${portfolio}" target="_blank" rel="noopener noreferrer" class="flex items-center p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
+                <i class="fas fa-globe text-xl text-gray-500 w-6 text-center"></i>
+                <span class="ml-2 text-sm font-medium text-gray-700 truncate">${portfolio.replace('https://www.', '')}</span>
+            </a>
+        `;
+    }
+
+    if (hasLinks) {
+        container.innerHTML = html;
+        container.parentElement.classList.remove('hidden'); // Show the whole section
+    } else {
+        container.innerHTML = '';
+        container.parentElement.classList.add('hidden'); // Hide the section if no links
+    }
+}
+
+
 /**
  * Fetches a specific user's PRIVATE profile and shows it in the modal.
  */
@@ -627,12 +741,7 @@ async function showUserProfile(userId) {
     const swapMsgDiv = document.getElementById('swapRequestMessage');
     const skillOfferEl = document.getElementById('modalSkillOfferContainer');
     const skillSeekEl = document.getElementById('modalSkillSeekContainer');
-    // --- NEW: Link Elements ---
-    const linkedInEl = document.getElementById('modalProfileLinkedIn');
-    const gitHubEl = document.getElementById('modalProfileGitHub');
-    const portfolioEl = document.getElementById('modalProfilePortfolio'); // Reverted from YouTube
-    const noLinksEl = document.getElementById('modalNoLinksMessage');
-    // --- END NEW ---
+    const linksEl = document.getElementById('modalUserLinksContainer'); // Get links container
 
     // Reset message and button state
     if (swapMsgDiv) swapMsgDiv.classList.add('hidden');
@@ -649,12 +758,10 @@ async function showUserProfile(userId) {
     bioEl.innerText = "Loading...";
     if (skillOfferEl) skillOfferEl.innerHTML = `<p class="text-gray-500 text-sm">Loading skills...</p>`;
     if (skillSeekEl) skillSeekEl.innerHTML = `<p class="text-gray-500 text-sm">Loading skills...</p>`;
-    // --- NEW: Reset Links ---
-    if (linkedInEl) linkedInEl.classList.add('hidden');
-    if (gitHubEl) gitHubEl.classList.add('hidden');
-    if (portfolioEl) portfolioEl.classList.add('hidden'); // Reverted from YouTube
-    if (noLinksEl) noLinksEl.classList.remove('hidden'); // Show "no links" by default
-    // --- END NEW ---
+    if (linksEl) {
+         linksEl.innerHTML = `<p class="text-gray-500 text-sm">Loading links...</p>`;
+         linksEl.parentElement.classList.remove('hidden'); // Show section
+    }
     
     userModalBackdrop.classList.remove('hidden');
     userModal.classList.remove('hidden');
@@ -682,54 +789,13 @@ async function showUserProfile(userId) {
         emailEl.innerText = privateData.email || 'N/A'; // Email comes from private doc
         bioEl.innerText = privateData.bio || "This user has not set a bio."; // Bio comes from private doc
 
-        // --- NEW: Populate Links ---
-        // We read from publicData for speed and since these links are public-facing
-        const linkedIn = publicData.linkedIn || '';
-        const gitHub = publicData.gitHub || '';
-        const portfolio = publicData.portfolio || ''; // Reverted from YouTube
-        let hasLinks = false;
-
-        if (linkedInEl) {
-            if (linkedIn) {
-                linkedInEl.href = linkedIn;
-                linkedInEl.classList.remove('hidden');
-                linkedInEl.classList.add('inline-flex');
-                hasLinks = true;
-            } else {
-                linkedInEl.classList.add('hidden');
-                linkedInEl.classList.remove('inline-flex');
-            }
-        }
-        if (gitHubEl) {
-            if (gitHub) {
-                gitHubEl.href = gitHub;
-                gitHubEl.classList.remove('hidden');
-                gitHubEl.classList.add('inline-flex');
-                hasLinks = true;
-            } else {
-                gitHubEl.classList.add('hidden');
-                gitHubEl.classList.remove('inline-flex');
-            }
-        }
-        if (portfolioEl) { // Reverted from YouTube
-            if (portfolio) { // Reverted from YouTube
-                portfolioEl.href = portfolio; // Reverted from YouTube
-                portfolioEl.classList.remove('hidden');
-                portfolioEl.classList.add('inline-flex');
-                hasLinks = true;
-            } else {
-                portfolioEl.classList.add('hidden');
-                portfolioEl.classList.remove('inline-flex');
-            }
-        }
-        if (noLinksEl) {
-            noLinksEl.classList.toggle('hidden', hasLinks);
-        }
-        // --- END NEW ---
-
         // --- Render skills ---
         renderSkillsToModal(skillOfferEl, publicData.skillsOffering, 'offering');
         renderSkillsToModal(skillSeekEl, publicData.skillsSeeking, 'seeking');
+        
+        // --- Render Links ---
+        renderLinksToModal(linksEl, publicData); // Links come from public data
+
 
         // --- Check if already swapped or pending ---
         const isSwapped = await checkSwapStatus(userId);
