@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - Skill Swap</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Configure Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': {
+                            500: '#3b82f6', // Blue-500
+                            600: '#2563eb', // Blue-600
+                        },
+                        'secondary': { // Teal (Learn)
+                            500: '#14b8a6', 
+                            600: '#0d9488',
+                        },
+                        'tertiary': { // Pink (Teach)
+                            500: '#ec4899', 
+                            600: '#db2777',
+                        },
+                        'error-red': { // Custom Red for Logout/Errors
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                            100: '#fee2e2',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbars */
+        .chat-sidebar::-webkit-scrollbar { width: 6px; }
+        .chat-sidebar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+        .chat-messages::-webkit-scrollbar { width: 8px; }
+        .chat-messages::-webkit-scrollbar-thumb { background-color: #9ca3af; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md fixed w-full top-0 left-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <a href="dashboard.html" class="flex items-center space-x-2">
+                    <i class="fas fa-handshake text-primary-500 text-2xl"></i>
+                    <span class="text-2xl font-bold text-gray-900">Skill Swap</span>
+                </a>
+                
+                <!-- Nav Links (Notification, Swaps, Profile, Logout) -->
+                <div class="flex items-center space-x-4">
+                    
+                    <!-- Notification Bell -->
+                    <a href="dashboard.html" class="p-2 text-gray-600 hover:text-primary-500 transition duration-150 relative" title="Dashboard Notifications">
+                        <i class="fas fa-bell text-xl"></i>
+                    </a>
+
+                    <!-- Swapped Users Button -->
+                    <a href="dashboard.html" class="p-2 text-gray-600 hover:text-secondary-500 transition duration-150 relative" title="Swapped Users">
+                        <i class="fas fa-users text-xl"></i>
+                    </a>
+                    
+                    <!-- Dashboard Link -->
+                    <a href="dashboard.html" class="p-2 text-gray-600 hover:text-primary-500 transition duration-150" title="Dashboard">
+                        <i class="fas fa-th-large text-xl"></i>
+                    </a>
+                    
+                    <!-- Chat Link (Active Page) -->
+                    <a href="chat.html" class="p-2 text-primary-500 transition duration-150" title="Chat">
+                        <i class="fas fa-comments text-xl"></i>
+                    </a>
+                    <!-- End Chat Link -->
+
+                    <!-- Link to Profile Page -->
+                    <a href="homepage.html"class="p-2 text-gray-600 hover:text-primary-500 transition duration-150 rounded-full" title="My Profile">
+                         <i class="fas fa-user-circle text-2xl"></i> 
+                    </a>
+
+                    <!-- Logout Button (Red Style) -->
+                    <button id="logout" class="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-error-red-600 hover:bg-error-red-700 shadow-md transition duration-150">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Chat UI Content -->
+    <div class="pt-20 pb-4 h-screen"> <!-- Padding top to offset fixed nav, pb-4 for spacing -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
+            
+            <div class="flex h-full bg-white rounded-lg shadow-xl overflow-hidden">
+                
+                <!-- Sidebar (Contacts) -->
+                <div class="w-full md:w-1/3 border-r border-gray-200 flex flex-col">
+                    <!-- Sidebar Header -->
+                    <div class="p-4 border-b">
+                        <h2 class="text-xl font-bold text-gray-800">My Swap Buddies</h2>
+                        <!-- Optional: Search Bar -->
+                        <!-- <input type="text" placeholder="Search contacts..." class="w-full mt-2 p-2 border rounded-lg text-sm"> -->
+                    </div>
+                    <!-- Contact List -->
+                    <div id="contactList" class="flex-1 overflow-y-auto chat-sidebar">
+                        <!-- Loading State -->
+                        <p id="contactsLoading" class="p-4 text-gray-500 text-sm">Loading contacts...</p>
+                        
+                        <!-- Static Example: Selected Contact -->
+                        <button class="flex items-center w-full text-left p-4 space-x-3 bg-primary-50 border-r-4 border-primary-500">
+                            <i class="fas fa-user-circle text-gray-400 text-3xl"></i>
+                            <div>
+                                <h3 class="font-semibold text-primary-600">Jane Doe</h3>
+                                <p class="text-sm text-gray-500 truncate">Okay, sounds good! See you then.</p>
+                            </div>
+                        </button>
+                        
+                        <!-- Static Example: Unselected Contact -->
+                        <button class="flex items-center w-full text-left p-4 space-x-3 hover:bg-gray-50 transition duration-150">
+                            <i class="fas fa-user-circle text-gray-400 text-3xl"></i>
+                            <div>
+                                <h3 class="font-semibold text-gray-800">John Smith</h3>
+                                <p class="text-sm text-gray-500 truncate">Can we reschedule for next week?</p>
+                            </div>
+                        </button>
+
+                        <!-- Static Example: Unselected Contact -->
+                        <button class="flex items-center w-full text-left p-4 space-x-3 hover:bg-gray-50 transition duration-150">
+                            <i class="fas fa-user-circle text-gray-400 text-3xl"></i>
+                            <div>
+                                <h3 class="font-semibold text-gray-800">Alex Johnson</h3>
+                                <p class="text-sm text-gray-500 truncate">Thanks for the help with Python!</p>
+                            </div>
+                        </button>
+
+                    </div>
+                </div>
+
+                <!-- Main Chat Area -->
+                <div class="w-full md:w-2/3 flex flex-col">
+                    <!-- Chat Header (Selected User) -->
+                    <div id="chatHeader" class="p-4 border-b border-gray-200 bg-gray-50 h-[69px] flex items-center">
+                        <h2 id="chatWithUserName" class="text-xl font-bold text-gray-800">Jane Doe</h2>
+                        <!-- Optional: Add link to their profile -->
+                    </div>
+
+                    <!-- Messages Window -->
+                    <div id="chatMessages" class="flex-1 p-4 space-y-4 overflow-y-auto bg-gray-100 chat-messages flex flex-col">
+                        
+                        <!-- Placeholder for "Select a chat" -->
+                        <!-- <div id="chatWelcome" class="flex justify-center items-center h-full">
+                            <p class="text-gray-500">Select a contact to start chatting.</p>
+                        </div> -->
+
+                        <!-- Static Example: Receiver's Message -->
+                        <div class="flex items-start space-x-2 self-start">
+                            <i class="fas fa-user-circle text-gray-400 text-3xl"></i>
+                            <div class="p-3 bg-gray-200 text-gray-800 rounded-lg rounded-tl-none max-w-xs md:max-w-md">
+                                <p class="text-sm">Hey! I was wondering if you're free to meet this weekend for our guitar lesson?</p>
+                            </div>
+                        </div>
+
+                        <!-- Static Example: Sender's Message -->
+                        <div class="flex items-end space-x-2 self-end">
+                             <div class="p-3 bg-primary-500 text-white rounded-lg rounded-br-none max-w-xs md:max-w-md">
+                                <p class="text-sm">Hi Jane! This weekend works great. How about Saturday at 2 PM?</p>
+                            </div>
+                            <i class="fas fa-user-circle text-primary-500 text-3xl"></i>
+                        </div>
+                        
+                        <!-- Static Example: Receiver's Message -->
+                        <div class="flex items-start space-x-2 self-start">
+                            <i class="fas fa-user-circle text-gray-400 text-3xl"></i>
+                            <div class="p-3 bg-gray-200 text-gray-800 rounded-lg rounded-tl-none max-w-xs md:max-w-md">
+                                <p class="text-sm">Okay, sounds good! See you then.</p>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Message Input Form -->
+                    <div id="chatInputContainer" class="p-4 bg-white border-t border-gray-200">
+                        <form id="messageForm" class="flex space-x-3">
+                            <input type="text" id="messageInput" class="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Type your message..." autocomplete="off">
+                            <button type="submit" class="px-6 py-3 bg-primary-500 text-white rounded-lg font-semibold hover:bg-primary-600 transition">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JavaScript file (to be created) -->
+    <script type="module" src="chat.js"></script> 
+</body>
+</html>
+
