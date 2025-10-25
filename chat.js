@@ -102,21 +102,23 @@ async function getUserData(userId) {
 
 /**
  * Renders a single message into the chat window.
+ * MODIFIED: Now accepts a docId to set a unique element ID.
  */
-function renderMessage(messageData) {
+function renderMessage(docId, messageData) {
     const isSender = messageData.senderId === currentUserId;
     const timestamp = formatTimestamp(messageData.timestamp);
     
     const messageDiv = document.createElement('div');
+    messageDiv.id = `msg-${docId}`; // <-- SET UNIQUE ID
     messageDiv.className = `flex items-end space-x-2 ${isSender ? 'self-end' : 'self-start'}`;
     
     const userIcon = `<i class="fas fa-user-circle text-3xl ${isSender ? 'text-primary-500' : 'text-gray-400'}"></i>`;
     const messageBubble = `
         <div class="p-3 rounded-lg max-w-xs md:max-w-md ${isSender ? 'bg-primary-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-800 rounded-tl-none'}">
             <p class="text-sm">${messageData.text}</p>
-            <span class="text-xs ${isSender ? 'text-blue-100' : 'text-gray-500'} block text-right mt-1">${timestamp}</span>
+            <span class="message-timestamp text-xs ${isSender ? 'text-blue-100' : 'text-gray-500'} block text-right mt-1">${timestamp}</span>
         </div>
-    `;
+    `; // <-- ADDED 'message-timestamp' CLASS
 
     if (isSender) {
         messageDiv.innerHTML = messageBubble + userIcon;
@@ -129,6 +131,7 @@ function renderMessage(messageData) {
 
 /**
  * Loads all messages for the currently selected chat partner.
+ * MODIFIED: Now handles "modified" changes to update timestamps.
  */
 function loadMessages(partnerId) {
     if (!currentUserId) return;
@@ -148,7 +151,19 @@ function loadMessages(partnerId) {
     unsubscribeMessages = onSnapshot(q, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             if (change.type === "added") {
-                renderMessage(change.doc.data());
+                renderMessage(change.doc.id, change.doc.data()); // <-- Pass doc.id
+            }
+            if (change.type === "modified") { // <-- THIS BLOCK IS NEW
+                // Find the existing message element
+                const msgElement = document.getElementById(`msg-${change.doc.id}`);
+                if (msgElement) {
+                    // Find the timestamp span inside it
+                    const timestampSpan = msgElement.querySelector('.message-timestamp');
+                    if (timestampSpan) {
+                        // Update the timestamp text
+                        timestampSpan.innerText = formatTimestamp(change.doc.data().timestamp);
+                    }
+                }
             }
         });
         scrollToBottom();
@@ -320,3 +335,4 @@ if (elements.logoutBtn) {
 if (elements.messageForm) {
     elements.messageForm.addEventListener('submit', handleSendMessage);
 }
+
