@@ -74,6 +74,16 @@
         }
         /* --- END Skill Pill Styles --- */
         
+        /* New Styles for inline skill tags on user cards */
+        .card-skill-tag {
+            font-size: 0.75rem; /* text-xs */
+            padding: 2px 6px;
+            border-radius: 4px;
+            background-color: #e5e7eb; /* gray-200 */
+            color: #374151; /* gray-700 */
+            margin-right: 4px;
+        }
+
         /* Custom scrollbar for better look */
         .max-h-\[60vh\]::-webkit-scrollbar {
             width: 8px;
@@ -96,7 +106,7 @@
                     <span class="text-2xl font-bold text-gray-900">Skill Swap</span>
                 </a>
                 
-                <!-- Nav Links (My Profile -> Dashboard -> Logout) -->
+                <!-- Nav Links (Notification, Swaps, Profile, Logout) -->
                 <div class="flex items-center space-x-4">
                     
                     <!-- Notification Bell and Badge -->
@@ -108,14 +118,27 @@
                         </button>
                     </div>
 
+                    <!-- Swapped Users Button (NEW Dropdown Structure) -->
+                    <div class="relative">
+                        <button id="swappedUsersButton" class="p-2 text-gray-600 hover:text-secondary-500 transition duration-150 relative">
+                            <i class="fas fa-users text-xl"></i>
+                        </button>
+                        
+                        <!-- Swapped Users Dropdown Menu -->
+                        <div id="swappedUsersDropdownMenu" class="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-40 hidden max-h-72 overflow-y-auto">
+                            <!-- Swapped user list injected here by dashboard.js -->
+                            <div class="px-4 py-2 text-sm font-semibold text-gray-800 border-b">Active Swaps</div>
+                            
+                            <!-- Loading State for smoother transitions -->
+                            <div id="swappedDropdownLoading" class="flex items-center px-4 py-2 text-sm text-gray-500">
+                                <i class="fas fa-spinner fa-spin mr-2"></i> Fetching swaps...
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Link to Profile Page -->
-                    <a href="homepage.html" class="px-3 py-2 text-sm font-medium rounded-md text-primary-600 bg-primary-100 hover:bg-primary-200 transition duration-150">
-                         <i class="fas fa-user mr-1"></i> My Profile
-                    </a>
-                    
-                    <!-- Link to Dashboard (Current Page) -->
-                    <a href="#" class="text-gray-600 hover:text-primary-500 font-medium transition duration-150">
-                        <i class="fas fa-th-large mr-1"></i> Dashboard
+                    <a href="homepage.html"class="p-2 text-gray-600 hover:text-primary-500 transition duration-150 rounded-full">
+                         <i class="fas fa-user-circle text-2xl"></i> 
                     </a>
 
                     <!-- Logout Button (Red Style) -->
@@ -137,15 +160,15 @@
                 <p class="text-xl text-gray-600 mt-1">Connect with others to learn and grow.</p>
             </div>
 
-            <!-- Notification Area (Initially Hidden) -->
+            <!-- Notification Area (Incoming Requests) -->
             <div id="notificationArea" class="bg-white rounded-lg shadow-xl overflow-hidden mb-8 hidden">
                 <!-- Content injected by dashboard.js (Pending Requests) -->
             </div>
 
-            <!-- User List Section -->
-            <div class="bg-white rounded-lg shadow-xl overflow-hidden">
+            <!-- User List Section (Default View) -->
+            <div id="userListSection" class="bg-white rounded-lg shadow-xl overflow-hidden">
                 <div class="p-6 border-b border-gray-200">
-                    <h2 class="text-2xl font-semibold text-gray-800">Other Users on Skill Swap</h2>
+                    <h2 class="text-2xl font-semibold text-gray-800">All Other Users</h2>
                 </div>
                 <!-- Grid container for user buttons -->
                 <div id="userListContainer" class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -48,6 +48,14 @@ const logoutButton = document.getElementById('logout');
 const notificationBell = document.getElementById('notificationBell');
 const requestSwapButton = document.getElementById('requestSwapButton');
 
+const swappedUsersButton = document.getElementById('swappedUsersButton'); 
+const userListContainer = document.getElementById('userListContainer'); 
+const userListSection = document.getElementById('userListSection'); 
+
+// --- NEW: Dropdown Elements ---
+const swappedUsersDropdownMenu = document.getElementById('swappedUsersDropdownMenu');
+
+
 /**
  * Creates a promise that resolves with the user's initial auth state.
  */
@@ -104,7 +112,6 @@ async function handleSwapResponse(requestId, action) {
         console.log(`Swap request ${requestId} ${newStatus}.`);
 
         // The onSnapshot listener will automatically refresh the notification list
-        // Show temporary message if needed
     } catch (error) {
         console.error(`Error updating request ${requestId}:`, error);
     }
@@ -284,6 +291,96 @@ async function checkSwapStatus(targetUserId) {
 
     return !snap1.empty || !snap2.empty;
 }
+
+
+// --- Swapped Users View Logic (Dropdown) ---
+
+/**
+ * Toggles the visibility of the swapped users dropdown menu.
+ */
+function toggleSwappedUsersDropdown(currentUserId) {
+    if (!swappedUsersDropdownMenu) return;
+
+    // Load and render the list if it's about to be shown
+    if (swappedUsersDropdownMenu.classList.contains('hidden')) {
+        loadSwappedUsersForDropdown(currentUserId);
+    }
+    
+    swappedUsersDropdownMenu.classList.toggle('hidden');
+}
+
+
+/**
+ * Loads and renders users with an accepted swap status directly into the dropdown menu.
+ */
+function loadSwappedUsersForDropdown(currentUserId) {
+    // Path to the PUBLIC user directory
+    const usersCollectionRef = collection(db, `artifacts/${appId}/public/data/user_directory`);
+    const q = query(usersCollectionRef);
+
+    // Initial render of loading state (Assuming HTML has swappedDropdownLoading)
+    const loadingDiv = document.getElementById('swappedDropdownLoading');
+    if (loadingDiv) loadingDiv.classList.remove('hidden');
+
+    onSnapshot(q, async (snapshot) => {
+        
+        // Hide loading state now that data is processing
+        const currentLoadingDiv = document.getElementById('swappedDropdownLoading');
+        if (currentLoadingDiv) currentLoadingDiv.classList.add('hidden');
+        
+        // Clear container but keep header
+        swappedUsersDropdownMenu.innerHTML = '<div class="px-4 py-2 text-sm font-semibold text-gray-800 border-b">Active Swaps</div>'; 
+        
+        const swappedUsers = [];
+        // 1. Filter and identify swapped users
+        for (const docSnap of snapshot.docs) {
+            const userId = docSnap.id;
+            if (userId !== currentUserId) {
+                const isSwapped = await checkSwapStatus(userId);
+                if (isSwapped) {
+                    swappedUsers.push({ id: userId, ...docSnap.data() });
+                }
+            }
+        }
+        
+        // 2. Render the list
+        if (swappedUsers.length === 0) {
+            swappedUsersDropdownMenu.innerHTML += `
+                <div class="px-4 py-2 text-sm text-gray-500">No active swaps yet.</div>
+            `;
+            return;
+        }
+
+        swappedUsersDropdownMenu.innerHTML += swappedUsers.map(user => `
+            <button data-userid="${user.id}" class="dropdown-profile-button flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition">
+                <i class="fas fa-handshake text-secondary-500 mr-3"></i>
+                ${user.firstName} ${user.lastName}
+            </button>
+        `).join('');
+
+        // 3. Add click listeners to open the user profile modal
+        document.querySelectorAll('.dropdown-profile-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation(); // Stop click from immediately closing modal
+                showUserProfile(button.dataset.userid);
+                swappedUsersDropdownMenu.classList.add('hidden'); // Close dropdown after selection
+            });
+        });
+
+    }, (error) => {
+        console.error("Error loading swapped users:", error);
+        swappedUsersDropdownMenu.innerHTML = `<div class="px-4 py-2 text-sm text-red-500">Could not load list.</div>`;
+    });
+}
+
+
+// --- View Toggle Logic (Simplified) ---
+
+function toggleView(view) {
+    // This function ensures the main list is always visible as the dropdown is separate
+    userListSection.classList.remove('hidden'); 
+}
+
 
 // --- Swap Request Button Logic (in User Modal) ---
 
@@ -591,6 +688,27 @@ function setupModalClose() {
         notificationBell.addEventListener('click', () => {
             notificationArea.classList.toggle('hidden');
         });
+    }
+    
+    // --- Toggle Swapped/All Users View Listener (NEW) ---
+    if (swappedUsersButton) {
+        swappedUsersButton.addEventListener('click', () => {
+            // New logic: Only toggle the dropdown, the main view remains 'all'
+            toggleSwappedUsersDropdown(currentUserId);
+        });
+        
+        // Close dropdown when clicking outside
+        document.body.addEventListener('click', (e) => {
+            if (swappedUsersDropdownMenu && !swappedUsersDropdownMenu.classList.contains('hidden')) {
+                // Use a general check that targets the button or the menu itself
+                if (!swappedUsersButton.contains(e.target) && !swappedUsersDropdownMenu.contains(e.target)) {
+                    swappedUsersDropdownMenu.classList.add('hidden');
+                }
+            }
+        });
+        
+        // Initial view setup: Always show 'all' users initially
+        toggleView('all');
     }
 
 
