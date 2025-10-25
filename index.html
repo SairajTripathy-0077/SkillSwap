@@ -17,20 +17,14 @@
             font-family: 'Inter', sans-serif;
             min-height: 100vh;
         }
-        
-        /* Hide scrollbar when modal is open */
-        body.modal-open {
-            overflow: hidden;
-        }
 
         /* Modal Styles */
         .modal-backdrop {
             background-color: rgba(0, 0, 0, 0.7);
             z-index: 50;
-            transition: opacity 0.3s ease-in-out;
         }
         .form-container {
-            /* Updated Positioning and Scrolling */
+            /* --- FIX: Updated Positioning and Scrolling --- */
             width: 95%;
             max-width: 450px;
             padding: 1.5rem;
@@ -46,7 +40,7 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             z-index: 51;
             position: fixed; /* Keep it fixed so it overlays the content */
-            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            /* ------------------------------------------- */
         }
 
         /* Form Input Styling (adapted for Tailwind) */
@@ -70,7 +64,7 @@
             border-bottom-color: var(--primary-color);
         }
         
-        /* Lock Icon Placement */
+        /* FIX 1: Corrected Lock Icon Placement (first i child) */
         .input-group > i:first-child { 
             position: absolute;
             top: 50%;
@@ -79,7 +73,7 @@
             color: #9ca3af; /* Gray 400 */
         }
         
-        /* Password toggle icon */
+        /* New style for the password toggle icon */
         .password-toggle {
             position: absolute;
             top: 50%;
@@ -89,6 +83,7 @@
             cursor: pointer;
             z-index: 60; /* Ensure it is clickable over the input */
         }
+
 
         /* Custom Label Animation (for the classic look) */
         .input-group label {
@@ -102,34 +97,107 @@
             pointer-events: none;
         }
         
-        /* Focused Label Placement */
+        /* FIX 2: Corrected Focused Label Placement */
         .input-group input:focus ~ label,
         .input-group input:not(:placeholder-shown) ~ label {
             top: 0.2rem; /* Adjusted top position to sit slightly higher */
-            left: 2.5rem; /* Stays aligned with the input text start */
+            left: 2.5rem; /* CORRECTED: Stays aligned with the input text start */
             transform: translateY(0);
             color: var(--primary-color);
             font-size: 0.8rem;
         }
         
         /* Textarea specific styling */
-        #rBio:focus {
-            border-color: var(--primary-color) !important;
-            box-shadow: 0 0 0 1px var(--primary-color);
+        .textarea-label {
+            display: block;
+            font-size: 0.875rem; /* text-sm */
+            font-weight: 500; /* font-medium */
+            color: #4b5563; /* gray-600 */
+            margin-bottom: 4px;
         }
         
-        /* This is the style your firebaseauth.js expects for messages */
+        textarea.form-textarea {
+            margin-top: 4px;
+            display: block;
+            width: 100%;
+            border-color: #d1d5db; /* gray-300 */
+            border-radius: 0.375rem; /* rounded-md */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+            padding: 8px 12px;
+            border-width: 1px;
+        }
+        
+        textarea.form-textarea:focus {
+            border-color: var(--primary-color) !important;
+            box-shadow: 0 0 0 1px var(--primary-color);
+            outline: none;
+        }
+
+        /* --- NEW: Form Input Styling --- */
+        input.form-input {
+            display: block;
+            width: 100%;
+            border-color: #d1d5db; /* gray-300 */
+            border-radius: 0.375rem; /* rounded-md */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+            padding: 8px 12px;
+            border-width: 1px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        input.form-input:focus {
+            border-color: var(--primary-color) !important;
+            box-shadow: 0 0 0 1px var(--primary-color);
+            outline: none;
+        }
+        /* --- END: Form Input Styling --- */
+        
         .messageDiv {
             padding: 8px 12px;
             border-radius: 5px;
             margin-bottom: 15px;
             font-size: 0.9rem;
-            opacity: 1;
+            opacity: 1; /* Managed by JS */
             transition: opacity 0.5s;
-            display: none; /* Hidden by default */
-            color: white;
-            background-color: #ef4444; /* Default error color */
         }
+        
+        /* --- NEW: Skill Pill Styles --- */
+        .skill-pill-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 8px;
+            border: 1px solid #e5e7eb; /* gray-200 */
+            border-radius: 0.375rem; /* rounded-md */
+            min-height: 40px;
+            margin-top: 8px;
+        }
+
+        .skill-pill {
+            display: inline-flex;
+            align-items: center;
+            background-color: #e0e7ff; /* Indigo 100 */
+            color: #3730a3; /* Indigo 800 */
+            border-radius: 9999px;
+            padding: 4px 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .skill-pill-seeking {
+            background-color: #fef3c7; /* Amber 100 */
+            color: #92400e; /* Amber 800 */
+        }
+
+        .delete-skill {
+            margin-left: 8px;
+            cursor: pointer;
+            color: #6b7280; /* Gray 500 */
+            font-size: 0.75rem;
+        }
+        .delete-skill:hover {
+            color: #ef4444; /* Red 500 */
+        }
+        /* --- END: Skill Pill Styles --- */
         
     </style>
     <!-- Configure Tailwind for Inter font and primary colors -->
@@ -159,31 +227,40 @@
             }
         }
     </script>
+    <!-- Import Firebase Authentication script -->
+    <script type="module" src="firebaseauth.js"></script>
 </head>
 <body class="bg-gray-50">
 
     <!-- Navbar -->
-    <nav class="bg-white shadow-md fixed w-full top-0 left-0 z-40">
+    <nav class="bg-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <a href="#" class="flex items-center space-x-2">
                     <i class="fas fa-handshake text-primary-500 text-2xl"></i>
                     <span class="text-2xl font-bold text-gray-900">Skill Swap</span>
                 </a>
-                
-                <!-- Auth Links Wrapper - Static for logged-out page -->
-                <div class="flex items-center space-x-4">
-                    <div id="authLinks" class="flex items-center space-x-2">
-                        <button id="navSignInButton" class="text-gray-600 hover:text-primary-500 font-medium transition duration-150">Login</button>
-                        <button id="navSignUpButton" class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-500 hover:bg-primary-600 shadow-md transition duration-150">Get Started</button>
-                    </div>
+                <!-- Logged Out State -->
+                <div id="nav-logged-out" class="space-x-4">
+                    <button id="navSignInButton" class="text-gray-600 hover:text-primary-500 font-medium transition duration-150">Login</button>
+                    <button id="navSignUpButton" class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-500 hover:bg-primary-600 shadow-md transition duration-150">Get Started</button>
+                </div>
+                <!-- Logged In State (Initially Hidden) -->
+                <div id="nav-logged-in" class="hidden items-center space-x-4">
+                    <span id="nav-welcome" class="text-gray-700 font-medium">Welcome!</span>
+                    <a href="homepage.html" class="text-gray-600 hover:text-primary-500 font-medium transition duration-150" title="My Profile">
+                        <i class="fas fa-user-circle text-xl"></i>
+                    </a>
+                    <button id="navLogoutButton" class="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-primary-600 bg-primary-100 hover:bg-primary-200 transition duration-150">
+                        Logout
+                    </button>
                 </div>
             </div>
         </div>
     </nav>
 
     <!-- Hero Section -->
-    <header class="bg-white pt-32 pb-20"> <!-- Added padding-top to offset fixed nav -->
+    <header class="bg-white py-20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <!-- MOTO with three colors -->
             <h1 class="text-5xl font-extrabold text-gray-900 sm:text-6xl md:text-7xl mb-6">
@@ -238,6 +315,14 @@
                 <a href="#" class="hover:text-primary-500">Privacy</a>
                 <a href="#" class="hover:text-primary-500">Terms</a>
             </div>
+            <!-- Contact Details -->
+            <div class="mt-4 text-gray-400 text-sm">
+                <p>Contact us: 
+                    <a href="mailto:connect.skillswap@gmail.com" class="hover:text-primary-500">connect.skillswap@gmail.com</a> 
+                    | 
+                    <span>9040006850</span>
+                </p>
+            </div>
         </div>
     </footer>
 
@@ -254,8 +339,7 @@
         <h2 class="form-title text-2xl font-bold text-center mb-6 text-gray-800">Register for Skill Swap</h2>
         <button id="closeSignup" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800"><i class="fas fa-times"></i></button>
         <form id="signupForm" method="post" action="">
-            <!-- Message div for firebaseauth.js -->
-            <div id="signUpMessage" class="messageDiv"></div>
+            <div id="signUpMessage" class="messageDiv bg-green-100 text-green-700 hidden" style="opacity:0;"></div>
             
             <div class="input-group">
                 <i class="fas fa-user"></i>
@@ -270,10 +354,44 @@
             
             <!-- Bio/Skill Description Input -->
             <div class="mt-4">
-                <label for="rBio" class="block text-sm font-medium text-gray-700 text-left">Bio:</label>
-                <textarea id="rBio" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-primary-500 focus:ring-primary-500 p-2 border" placeholder="e.g., I offer guitar lessons and want to learn Spanish." required></textarea>
+                <label for="rBio" class="textarea-label">Bio:</label>
+                <textarea id="rBio" rows="3" class="form-textarea" placeholder="e.g., I'm a developer who loves to paint." required></textarea>
             </div>
             
+            <!-- Skills I Offer Input -->
+            <div class="mt-4">
+                <label for="rSkillOfferInput" class="textarea-label">Skills I Offer:</label>
+                <!-- NEW UI: Input with button inside -->
+                <div class="relative rounded-md shadow-sm">
+                    <input type="text" id="rSkillOfferInput" class="form-input block w-full pr-12 sm:text-sm sm:leading-5" placeholder="e.g., JavaScript">
+                    <div class="absolute inset-y-0 right-0 flex items-center">
+                        <button type="button" id="addSkillOfferBtn" class="mr-2 flex items-center justify-center w-8 h-8 rounded-full text-white bg-primary-600 hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition duration-150">
+                            <i class="fas fa-plus text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="skillOfferContainer" class="skill-pill-container">
+                    <!-- Skill pills will be added here by JS -->
+                </div>
+            </div>
+
+            <!-- Skills I'm Seeking Input -->
+            <div class="mt-4">
+                <label for="rSkillSeekInput" class="textarea-label">Skills I'm Seeking:</label>
+                <!-- NEW UI: Input with button inside -->
+                <div class="relative rounded-md shadow-sm">
+                    <input type="text" id="rSkillSeekInput" class="form-input block w-full pr-12 sm:text-sm sm:leading-5" placeholder="e.g., Spanish">
+                    <div class="absolute inset-y-0 right-0 flex items-center">
+                        <button type="button" id="addSkillSeekBtn" class="mr-2 flex items-center justify-center w-8 h-8 rounded-full text-white bg-primary-600 hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition duration-150">
+                            <i class="fas fa-plus text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="skillSeekContainer" class="skill-pill-container">
+                    <!-- Skill pills will be added here by JS -->
+                </div>
+            </div>
+
             <div class="input-group mt-2">
                 <i class="fas fa-envelope"></i>
                 <input type="email" id="rEmail" placeholder=" " required>
@@ -288,7 +406,6 @@
                 <i id="toggleRPassword" class="password-toggle fas fa-eye-slash"></i>
             </div>
 
-            <!-- This button's click is handled by firebaseauth.js -->
             <button class="btn w-full bg-primary-500 text-white py-2 rounded-lg font-semibold mt-4 hover:bg-primary-600 transition" id="submitSignUp">Sign Up</button>
         </form>
         
@@ -306,8 +423,7 @@
         <h2 class="form-title text-2xl font-bold text-center mb-6 text-gray-800">Sign In to Swap</h2>
         <button id="closeSignIn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800"><i class="fas fa-times"></i></button>
         <form id="signInForm" method="post" action="">
-            <!-- Message div for firebaseauth.js -->
-            <div id="signInMessage" class="messageDiv"></div>
+            <div id="signInMessage" class="messageDiv bg-red-100 text-red-700 hidden" style="opacity:0;"></div>
 
             <div class="input-group">
                 <i class="fas fa-envelope"></i>
@@ -327,7 +443,6 @@
                 <a href="#" class="text-gray-500 hover:text-primary-500">Recover Password</a>
             </p>
             
-            <!-- This button's click is handled by firebaseauth.js -->
             <button class="btn w-full bg-primary-500 text-white py-2 rounded-lg font-semibold mt-4 hover:bg-primary-600 transition" id="submitSignIn">Sign In</button>
         </form>
         
@@ -341,102 +456,97 @@
     </div>
 
 
-    <!-- ============================================== -->
-    <!-- (1) FRONTEND-ONLY APP LOGIC (MODALS, TOGGLES) -->
-    <!-- ============================================== -->
     <script>
-        // --- DOM Elements ---
-        const modalBackdrop = document.getElementById('modalBackdrop');
-        const signInContainer = document.getElementById('signIn');
-        const signUpContainer = document.getElementById('signup');
+        // --- MODAL JAVASCRIPT LOGIC ---
         
-        // Nav buttons
-        const navSignInButton = document.getElementById('navSignInButton');
-        const navSignUpButton = document.getElementById('navSignUpButton');
-        const heroSignInButton = document.getElementById('heroSignInButton');
-        const heroSignUpButton = document.getElementById('heroSignUpButton');
-        
-        // Modal buttons
-        const closeSignIn = document.getElementById('closeSignIn');
-        const closeSignup = document.getElementById('closeSignup');
-        const switchSignInButton = document.getElementById('switchSignInButton'); // Toggle link
-        const switchSignUpButton = document.getElementById('switchSignUpButton'); // Toggle link
+        // --- FIX: Wrap in DOMContentLoaded ---
+        // This ensures all HTML elements are loaded before we try to find them.
+        document.addEventListener('DOMContentLoaded', () => {
+            const signInForm = document.getElementById('signIn');
+            const signUpForm = document.getElementById('signup');
+            const modalBackdrop = document.getElementById('modalBackdrop');
+            
+            // Functions to control visibility
+            function showModal(modalElement) {
+                if (modalBackdrop) modalBackdrop.classList.remove('hidden');
+                if (modalElement) modalElement.classList.remove('hidden');
+            }
 
-        // --- Modal Logic ---
-        function openModal(modalElement) {
-            // Clear messages when opening
-            const messages = modalElement.querySelectorAll('.messageDiv');
-            messages.forEach(msg => {
-                msg.style.display = 'none';
-                msg.textContent = '';
-            });
+            function hideAllModals() {
+                if (modalBackdrop) modalBackdrop.classList.add('hidden');
+                if (signInForm) signInForm.classList.add('hidden');
+                if (signUpForm) signUpForm.classList.add('hidden');
+            }
+            
+            // --- PASSWORD TOGGLE LOGIC ---
+            
+            function setupPasswordToggle(inputId, toggleId) {
+                const passwordInput = document.getElementById(inputId);
+                const toggleIcon = document.getElementById(toggleId);
 
-            modalBackdrop.classList.remove('hidden');
-            modalElement.classList.remove('hidden');
-            document.body.classList.add('modal-open');
-        }
-        
-        function closeModal() {
-            modalBackdrop.classList.add('hidden');
-            signInContainer.classList.add('hidden');
-            signUpContainer.classList.add('hidden');
-            document.body.classList.remove('modal-open');
-        }
+                if (passwordInput && toggleIcon) {
+                    toggleIcon.addEventListener('click', () => {
+                        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                        passwordInput.setAttribute('type', type);
+                        
+                        // Toggle the eye icon
+                        toggleIcon.classList.toggle('fa-eye');
+                        toggleIcon.classList.toggle('fa-eye-slash');
+                    });
+                }
+            }
 
-        // Toggle forms *within* the modal
-        function showSignInForm() {
-            signUpContainer.classList.add('hidden');
-            signInContainer.classList.remove('hidden');
-        }
-        function showSignUpForm() {
-            signInContainer.classList.add('hidden');
-            signUpContainer.classList.remove('hidden');
-        }
+            // Apply toggle to Sign Up password field
+            setupPasswordToggle('rPassword', 'toggleRPassword');
+            
+            // Apply toggle to Sign In password field
+            setupPasswordToggle('password', 'togglePassword');
 
-        // --- Password Toggle Logic ---
-        function setupPasswordToggle(inputId, toggleId) {
-            const passwordInput = document.getElementById(inputId);
-            const toggleIcon = document.getElementById(toggleId);
 
-            if (passwordInput && toggleIcon) {
-                toggleIcon.addEventListener('click', () => {
-                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-                    passwordInput.setAttribute('type', type);
-                    
-                    // Toggle the eye icon
-                    toggleIcon.classList.toggle('fa-eye');
-                    toggleIcon.classList.toggle('fa-eye-slash');
+            // --- BUTTON EVENT LISTENERS ---
+            // 1. Landing Page/Navbar CTAs to open modals
+            const navSignInButton = document.getElementById('navSignInButton');
+            const heroSignInButton = document.getElementById('heroSignInButton');
+            const navSignUpButton = document.getElementById('navSignUpButton');
+            const heroSignUpButton = document.getElementById('heroSignUpButton');
+            const switchSignInButton = document.getElementById('switchSignInButton');
+            const switchSignUpButton = document.getElementById('switchSignUpButton');
+            const closeSignup = document.getElementById('closeSignup');
+            const closeSignIn = document.getElementById('closeSignIn');
+
+            if (navSignInButton) navSignInButton.addEventListener('click', () => showModal(signInForm));
+            if (heroSignInButton) heroSignInButton.addEventListener('click', () => showModal(signInForm));
+            if (navSignUpButton) navSignUpButton.addEventListener('click', () => showModal(signUpForm));
+            if (heroSignUpButton) heroSignUpButton.addEventListener('click', () => showModal(signUpForm));
+            
+            // 2. Switch buttons inside the forms
+            if (switchSignInButton) {
+                switchSignInButton.addEventListener('click', () => {
+                    hideAllModals();
+                    showModal(signInForm);
                 });
             }
-        }
-        // Apply toggle to Sign Up password field
-        setupPasswordToggle('rPassword', 'toggleRPassword');
-        // Apply toggle to Sign In password field
-        setupPasswordToggle('password', 'togglePassword');
+            if (switchSignUpButton) {
+                switchSignUpButton.addEventListener('click', () => {
+                    hideAllModals();
+                    showModal(signUpForm);
+                });
+            }
 
+            // 3. Close buttons
+            if (closeSignup) closeSignup.addEventListener('click', hideAllModals);
+            if (closeSignIn) closeSignIn.addEventListener('click', hideAllModals);
+            if (modalBackdrop) {
+                modalBackdrop.addEventListener('click', hideAllModals); // Close on backdrop click
+            }
 
-        // --- Event Listeners ---
-        // 1. Open Modals
-        navSignInButton.addEventListener('click', () => openModal(signInContainer));
-        heroSignInButton.addEventListener('click', () => openModal(signInContainer));
-        navSignUpButton.addEventListener('click', () => openModal(signUpContainer));
-        heroSignUpButton.addEventListener('click', () => openModal(signUpContainer));
+            // Ensure forms are hidden on initial load by overriding the default style.
+            if (signUpForm) signUpForm.classList.add('hidden');
+            if (signInForm) signInForm.classList.add('hidden');
         
-        // 2. Close Modals
-        closeSignIn.addEventListener('click', closeModal);
-        closeSignup.addEventListener('click', closeModal);
-        modalBackdrop.addEventListener('click', closeModal);
-        
-        // 3. Switch Forms
-        switchSignInButton.addEventListener('click', showSignInForm);
-        switchSignUpButton.addEventListener('click', showSignUpForm);
+        }); // --- END of DOMContentLoaded ---
+
     </script>
-    
-    <!-- ============================================== -->
-    <!-- (2) FIREBASE AUTHENTICATION LOGIC -->
-    <!-- ============================================== -->
-    <script type="module" src="firebaseauth.js"></script>
-
 </body>
 </html>
 

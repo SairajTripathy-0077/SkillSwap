@@ -54,6 +54,9 @@ function loadUserDirectory(currentUserId) {
     const q = query(usersCollectionRef);
 
     onSnapshot(q, (snapshot) => {
+        // --- FIX: Clear the container before re-rendering ---
+        userListContainer.innerHTML = ''; 
+        
         const users = [];
         snapshot.forEach((doc) => {
             // Add all users EXCEPT the current one
@@ -89,6 +92,25 @@ function loadUserDirectory(currentUserId) {
 }
 
 /**
+ * Renders skill pills into a given container.
+ */
+function renderSkillsToModal(container, skills, type = 'offering') {
+    if (!container) return;
+
+    const pillClass = type === 'seeking' ? 'skill-pill skill-pill-seeking' : 'skill-pill';
+    
+    if (!skills || skills.length === 0) {
+        const message = type === 'seeking' ? 'No skills sought.' : 'No skills offered.';
+        container.innerHTML = `<p class="text-gray-500 text-sm">${message}</p>`;
+        return;
+    }
+    
+    container.innerHTML = skills.map(skill => 
+        `<span class="${pillClass}">${skill}</span>`
+    ).join('');
+}
+
+/**
  * Fetches a specific user's PRIVATE profile and shows it in the modal.
  */
 async function showUserProfile(userId) {
@@ -98,19 +120,32 @@ async function showUserProfile(userId) {
     const nameEl = document.getElementById('modalUserName');
     const emailEl = document.getElementById('modalUserEmail');
     const bioEl = document.getElementById('modalUserBio');
+    // --- NEW: Get skill containers ---
+    const skillOfferEl = document.getElementById('modalSkillOfferContainer');
+    const skillSeekEl = document.getElementById('modalSkillSeekContainer');
 
     // 1b. Show modal with loading state
     nameEl.innerText = "Loading...";
     emailEl.innerText = "Loading...";
     bioEl.innerText = "Loading...";
+    if (skillOfferEl) skillOfferEl.innerHTML = `<p class="text-gray-500 text-sm">Loading skills...</p>`;
+    if (skillSeekEl) skillSeekEl.innerHTML = `<p class="text-gray-500 text-sm">Loading skills...</p>`;
+    
     backdrop.classList.remove('hidden');
     modal.classList.remove('hidden');
 
-    // 2. Fetch the user's PRIVATE profile data
-    const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/info`);
+    // 2. Fetch the user's *PUBLIC* profile data (which has skills)
+    // We fetch from the public directory since firebaseauth.js saves skills there.
+    const userDocRef = doc(db, `artifacts/${appId}/public/data/user_directory`, userId);
+    
+    // We also need the *private* doc to get the email
+    const privateDocRef = doc(db, `artifacts/${appId}/users/${userId}/profile/info`);
+
     try {
-        const userDoc = await getDoc(userDocRef);
-        if (!userDoc.exists()) {
+        const publicDoc = await getDoc(userDocRef);
+        const privateDoc = await getDoc(privateDocRef);
+
+        if (!publicDoc.exists() || !privateDoc.exists()) {
             console.error("No profile data found for this user.");
             nameEl.innerText = "Error";
             bioEl.innerText = "Could not load user profile.";
@@ -118,12 +153,17 @@ async function showUserProfile(userId) {
             return;
         }
         
-        const userData = userDoc.data();
+        const publicData = publicDoc.data();
+        const privateData = privateDoc.data();
 
         // 3. Populate modal
-        nameEl.innerText = `${userData.firstName} ${userData.lastName}`;
-        emailEl.innerText = userData.email;
-        bioEl.innerText = userData.bio || "This user has not set a bio.";
+        nameEl.innerText = `${publicData.firstName} ${publicData.lastName}`;
+        emailEl.innerText = privateData.email; // Email comes from private doc
+        bioEl.innerText = privateData.bio || "This user has not set a bio."; // Bio comes from private doc
+
+        // --- NEW: Render skills ---
+        renderSkillsToModal(skillOfferEl, publicData.skillsOffering, 'offering');
+        renderSkillsToModal(skillSeekEl, publicData.skillsSeeking, 'seeking');
 
     } catch (error) {
         console.error("Error fetching user profile:", error);

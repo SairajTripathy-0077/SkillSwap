@@ -18,6 +18,14 @@
                             500: '#3b82f6', // Blue-500
                             600: '#2563eb', // Blue-600
                         },
+                        'secondary': { // Teal (Learn)
+                            500: '#14b8a6', 
+                            600: '#0d9488',
+                        },
+                        'tertiary': { // Pink (Teach)
+                            500: '#ec4899', 
+                            600: '#db2777',
+                        },
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
@@ -30,10 +38,37 @@
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* Simple modal transition */
-        .modal {
-            transition: opacity 0.25s ease;
+
+        /* --- Skill Pill Styles (for modal display) --- */
+        .skill-pill-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 8px;
+            border: 1px solid #e5e7eb; /* gray-200 */
+            border-radius: 6px;
+            min-height: 40px;
+            margin-top: 8px;
+            background-color: #f9fafb; /* gray-50 */
         }
+        
+        .skill-pill {
+            display: inline-flex;
+            align-items: center;
+            background-color: #dbeafe; /* blue-100 */
+            color: #1d4ed8; /* blue-700 */
+            padding: 4px 10px;
+            border-radius: 9999px; /* full pill shape */
+            font-size: 0.875rem; /* 14px */
+            font-weight: 500;
+        }
+        
+        .skill-pill-seeking {
+            background-color: #fce7f3; /* pink-100 */
+            color: #be185d; /* pink-700 */
+        }
+        /* --- END Skill Pill Styles --- */
+
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -50,31 +85,41 @@
                 
                 <!-- Nav Links -->
                 <div class="flex items-center space-x-4">
-                    <!-- Welcome Message -->
-                    <span id="welcomeMessage" class="hidden sm:block text-gray-700 font-medium">Welcome!</span>
                     
-                    <a href="homepage.html" class="text-gray-600 hover:text-primary-500 font-medium transition duration-150" title="My Profile">
-                        <i class="fas fa-user-circle text-xl"></i>
-                        <span class="sr-only">My Profile</span>
+                    <!-- Link to Profile Page -->
+                    <a href="homepage.html" class="text-gray-600 hover:text-primary-500 font-medium transition duration-150">
+                        <i class="fas fa-user mr-1"></i> My Profile
                     </a>
-                    <button id="logout" class="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-primary-600 bg-primary-100 hover:bg-primary-200 transition duration-150">
-                        Logout
+                    
+                    <!-- LOGOUT BUTTON (RED) -->
+                    <button id="logout" class="px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition duration-150 shadow-md">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Logout
                     </button>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content (User List) -->
+    <!-- Main Content -->
     <div class="pt-24 pb-12"> <!-- Padding top to offset fixed nav -->
-        <div class="max-w-4xl mx-auto px-4">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
-            <h1 class="text-3xl font-bold text-gray-900 mb-6">Available Users</h1>
-            
-            <!-- User List Container -->
-            <div id="userListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- User buttons will be dynamically inserted here by dashboard.js -->
-                <p class="text-gray-500 col-span-full">Loading users...</p>
+            <!-- Welcome Header -->
+            <div class="mb-8">
+                <h1 id="welcomeMessage" class="text-4xl font-bold text-gray-900">Welcome!</h1>
+                <p class="text-xl text-gray-600 mt-1">Connect with others to learn and grow.</p>
+            </div>
+
+            <!-- User List Section -->
+            <div class="bg-white rounded-lg shadow-xl overflow-hidden">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-2xl font-semibold text-gray-800">Other Users on Skill Swap</h2>
+                </div>
+                <!-- Grid container for user buttons -->
+                <div id="userListContainer" class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- User buttons will be injected here by dashboard.js -->
+                    <p class="text-gray-500 col-span-full">Loading users...</p>
+                </div>
             </div>
 
         </div>
@@ -82,41 +127,63 @@
 
     <!-- 
     ================================================================
-    User Profile Modal (for viewing other users)
+    User Profile Modal
     ================================================================
     -->
-    <div id="userModalBackdrop" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-40 hidden modal"></div>
-    <div id="userModal" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl w-full max-w-lg z-50 hidden modal">
+    <div id="userModalBackdrop" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-40 hidden"></div>
+    <div id="userModal" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl w-full max-w-lg z-50 hidden">
         <!-- Modal Header -->
         <div class="flex justify-between items-center p-5 border-b border-gray-200">
-            <h2 class="text-2xl font-bold text-gray-800">User Profile</h2>
+            <h2 id="modalUserName" class="text-2xl font-bold text-gray-800">User Profile</h2>
             <button id="closeUserModal" class="text-gray-400 hover:text-gray-600">
                 <i class="fas fa-times text-xl"></i>
             </button>
         </div>
         
-        <!-- Modal Body (Profile Info) -->
-        <div class="p-6 space-y-4">
-            <div>
-                <label class="text-sm font-semibold text-gray-500 uppercase">Name</label>
-                <p id="modalUserName" class="text-xl text-gray-900 p-2 bg-gray-50 rounded-md mt-1">Loading...</p>
-            </div>
+        <!-- Modal Body (User Info) -->
+        <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+            <!-- Email -->
             <div>
                 <label class="text-sm font-semibold text-gray-500 uppercase">Email</label>
-                <p id="modalUserEmail" class="text-xl text-gray-900 p-2 bg-gray-50 rounded-md mt-1">Loading...</p>
+                <p id="modalUserEmail" class="text-lg text-gray-900 p-2 bg-gray-50 rounded-md mt-1">Loading...</p>
             </div>
+            
+            <!-- Bio -->
             <div>
                 <label class="text-sm font-semibold text-gray-500 uppercase">Bio</label>
-                <p id="modalUserBio" class="text-xl text-gray-900 p-2 bg-gray-50 rounded-md mt-1 min-h-[60px]">Loading...</p>
+                <p id="modalUserBio" class="text-lg text-gray-900 p-2 bg-gray-50 rounded-md mt-1 min-h-[60px]">Loading...</p>
             </div>
+
+            <!-- --- Skills I Offer --- -->
+            <hr>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">
+                    <i class="fas fa-chalkboard-teacher text-primary-500 mr-2"></i>Skills I Offer
+                </h3>
+                <div id="modalSkillOfferContainer" class="skill-pill-container">
+                    <!-- Skill pills will be added here by JS -->
+                    <p class="text-gray-500 text-sm">Loading skills...</p>
+                </div>
+            </div>
+            <!-- --- END: Skills I Offer --- -->
+
+            <!-- --- Skills I'm Seeking --- -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">
+                    <i class="fas fa-book-open text-tertiary-500 mr-2"></i>Skills I'm Seeking
+                </h3>
+                <div id="modalSkillSeekContainer" class="skill-pill-container">
+                    <!-- Skill pills will be added here by JS -->
+                    <p class="text-gray-500 text-sm">Loading skills...</p>
+                </div>
+            </div>
+            <!-- --- END: Skills I'm Seeking --- -->
+
         </div>
     </div>
     <!-- End of User Profile Modal -->
 
-
     <!-- JavaScript file -->
     <script type="module" src="dashboard.js"></script>
-
 </body>
 </html>
-

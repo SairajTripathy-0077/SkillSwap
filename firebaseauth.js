@@ -3,13 +3,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { 
     getAuth, 
     createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword 
+    signInWithEmailAndPassword,
+    onAuthStateChanged, // Import onAuthStateChanged
+    signOut // Import signOut
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
     getFirestore, 
     setDoc, 
     doc,
-    setLogLevel
+    setLogLevel,
+    getDoc // Import getDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Your specific Firebase Config ---
@@ -30,7 +33,6 @@ setLogLevel('Debug'); // Enable Firebase logging
 
 // Get the app ID (project ID in this case) for the DB path
 const appId = firebaseConfig.projectId || 'default-app-id';
-
 
 /**
  * Helper function to show success/error messages in the form.
@@ -56,6 +58,94 @@ function showMessage(message, divId) {
     }, 4000);
 }
 
+// --- NEW: Skill Management Logic ---
+let skillsOffering = [];
+let skillsSeeking = [];
+
+// Get containers
+const skillOfferContainer = document.getElementById('skillOfferContainer');
+const skillSeekContainer = document.getElementById('skillSeekContainer');
+
+/**
+ * Renders the skill pills to the UI.
+ */
+function renderSkills() {
+    // Render Offering Skills
+    if (skillOfferContainer) {
+        skillOfferContainer.innerHTML = skillsOffering.map((skill, index) => `
+            <span class="skill-pill">
+                ${skill}
+                <i class="fas fa-times delete-skill" data-index="${index}" data-type="offering"></i>
+            </span>
+        `).join('');
+    }
+
+    // Render Seeking Skills
+    if (skillSeekContainer) {
+        skillSeekContainer.innerHTML = skillsSeeking.map((skill, index) => `
+            <span class="skill-pill skill-pill-seeking">
+                ${skill}
+                <i class="fas fa-times delete-skill" data-index="${index}" data-type="seeking"></i>
+            </span>
+        `).join('');
+    }
+
+    // Add event listeners to the new 'x' buttons
+    addDeleteListeners();
+}
+
+/**
+ * Adds click listeners to all skill-delete buttons.
+ */
+function addDeleteListeners() {
+    document.querySelectorAll('.delete-skill').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            const type = e.target.dataset.type;
+
+            if (type === 'offering') {
+                skillsOffering.splice(index, 1); // Remove from array
+            } else if (type === 'seeking') {
+                skillsSeeking.splice(index, 1); // Remove from array
+            }
+            
+            renderSkills(); // Re-render the UI
+        });
+    });
+}
+
+// Add Skill Button Listeners
+const addSkillOfferBtn = document.getElementById('addSkillOfferBtn');
+const rSkillOfferInput = document.getElementById('rSkillOfferInput');
+const addSkillSeekBtn = document.getElementById('addSkillSeekBtn');
+const rSkillSeekInput = document.getElementById('rSkillSeekInput');
+
+if (addSkillOfferBtn && rSkillOfferInput) {
+    addSkillOfferBtn.addEventListener('click', (e) => {
+        e.preventDefault(); // Prevent form submission
+        const skill = rSkillOfferInput.value.trim();
+        if (skill && !skillsOffering.includes(skill)) {
+            skillsOffering.push(skill);
+            renderSkills();
+            rSkillOfferInput.value = ''; // Clear input
+        }
+    });
+}
+
+if (addSkillSeekBtn && rSkillSeekInput) {
+    addSkillSeekBtn.addEventListener('click', (e) => {
+        e.preventDefault(); // Prevent form submission
+        const skill = rSkillSeekInput.value.trim();
+        if (skill && !skillsSeeking.includes(skill)) {
+            skillsSeeking.push(skill);
+            renderSkills();
+            rSkillSeekInput.value = ''; // Clear input
+        }
+    });
+}
+// --- END: Skill Management Logic ---
+
+
 // --- Sign Up Logic ---
 const signUpButton = document.getElementById('submitSignUp');
 if (signUpButton) {
@@ -67,11 +157,14 @@ if (signUpButton) {
         const password = document.getElementById('rPassword').value;
         const firstName = document.getElementById('fName').value;
         const lastName = document.getElementById('lName').value;
-        const bio = document.getElementById('rBio').value; // Get the bio
-
+        const bio = document.getElementById('rBio').value;
+        
+        // --- MODIFIED: Get skills from arrays ---
+        // (The skillsOffering and skillsSeeking arrays are already up-to-date)
+        
         // Basic validation
         if (!email || !password || !firstName || !lastName || !bio) {
-            showMessage('Error: All fields are required.', 'signUpMessage');
+            showMessage('Error: All fields (including bio) are required.', 'signUpMessage');
             return;
         }
 
@@ -85,13 +178,17 @@ if (signUpButton) {
                     email: email,
                     firstName: firstName,
                     lastName: lastName,
-                    bio: bio // Save the bio
+                    bio: bio,
+                    skillsOffering: skillsOffering, // Use the array
+                    skillsSeeking: skillsSeeking   // Use the array
                 };
                 
                 // 4. Define the PUBLIC user directory data
                 const publicUserData = {
                     firstName: firstName,
-                    lastName: lastName
+                    lastName: lastName,
+                    skillsOffering: skillsOffering, // Use the array
+                    skillsSeeking: skillsSeeking   // Use the array
                 };
 
                 // 5. Set up document references
@@ -170,4 +267,52 @@ if (signInButton) {
             });
     });
 }
+
+// --- NEW: Auth State Logic for Navbar ---
+const navLoggedOut = document.getElementById('nav-logged-out');
+const navLoggedIn = document.getElementById('nav-logged-in');
+const navWelcome = document.getElementById('nav-welcome');
+const navLogoutButton = document.getElementById('navLogoutButton');
+
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        // User is logged in
+        if (navLoggedOut) navLoggedOut.style.display = 'none';
+        if (navLoggedIn) navLoggedIn.style.display = 'flex'; // Use 'flex' to match items-center
+
+        // Fetch user's first name to personalize welcome
+        const userDocRef = doc(db, `artifacts/${appId}/users/${user.uid}/profile/info`);
+        getDoc(userDocRef).then(docSnap => {
+            if (docSnap.exists()) {
+                if (navWelcome) navWelcome.innerText = `Welcome, ${docSnap.data().firstName}!`;
+            } else {
+                if (navWelcome) navWelcome.innerText = 'Welcome!';
+            }
+        }).catch(err => {
+             console.error("Error fetching user name for navbar:", err);
+             if (navWelcome) navWelcome.innerText = 'Welcome!';
+        });
+
+        // Add logout listener
+        if (navLogoutButton) {
+            // Check if listener already exists to avoid duplicates
+            if (!navLogoutButton.hasAttribute('data-listener-added')) {
+                navLogoutButton.addEventListener('click', () => {
+                    signOut(auth).then(() => {
+                        console.log('User signed out');
+                        window.location.href = 'index.html'; // Redirect to home
+                    }).catch(error => {
+                        console.error('Sign out error', error);
+                    });
+                });
+                navLogoutButton.setAttribute('data-listener-added', 'true');
+            }
+        }
+
+    } else {
+        // User is logged out
+        if (navLoggedOut) navLoggedOut.style.display = 'block';
+        if (navLoggedIn) navLoggedIn.style.display = 'none';
+    }
+});
 
