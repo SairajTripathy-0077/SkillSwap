@@ -2,7 +2,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { 
     getAuth, 
     onAuthStateChanged, 
-    signOut 
+    signOut,
+    deleteUser // Needed for account deletion
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
     getFirestore, 
@@ -10,7 +11,8 @@ import {
     setLogLevel, 
     updateDoc,
     onSnapshot, // Use onSnapshot for real-time updates
-    setDoc
+    setDoc,
+    deleteDoc // Needed for account deletion
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Your specific Firebase Config ---
@@ -47,14 +49,17 @@ const page = {
     bio: document.getElementById('loggedUserBio'),
     logoutBtn: document.getElementById('logout'),
     editProfileBtn: document.getElementById('editProfileButton'),
-    editSkillsBtn: document.getElementById('editSkillsButton'), // Button on Skills card
     skillOfferContainer: document.getElementById('profileSkillOfferContainer'),
     skillSeekContainer: document.getElementById('profileSkillSeekContainer'),
-    loadingOffer: document.getElementById('loadingSkillsOffer'),
-    loadingSeek: document.getElementById('loadingSkillsSeek'),
+    // Delete Account Refs
+    deleteAccountBtn: document.getElementById('deleteAccountBtn'),
+    deleteModal: document.getElementById('deleteAccountModal'),
+    deleteModalBackdrop: document.getElementById('deleteAccountModalBackdrop'),
+    confirmDeleteBtn: document.getElementById('confirmDeleteBtn'),
+    cancelDeleteBtn: document.getElementById('cancelDeleteBtn'),
 };
 
-// --- Modal Element Refs ---
+// --- Edit Modal Element Refs ---
 const modal = {
     backdrop: document.getElementById('editModalBackdrop'),
     container: document.getElementById('editModal'),
@@ -79,7 +84,6 @@ const modal = {
  */
 function renderProfileSkills(skillsOffering = [], skillsSeeking = []) {
     if (page.skillOfferContainer) {
-        if (page.loadingOffer) page.loadingOffer.style.display = 'none';
         if (skillsOffering.length === 0) {
             page.skillOfferContainer.innerHTML = `<p class="text-gray-500 text-sm">No skills offered yet.</p>`;
         } else {
@@ -90,7 +94,6 @@ function renderProfileSkills(skillsOffering = [], skillsSeeking = []) {
     }
     
     if (page.skillSeekContainer) {
-        if (page.loadingSeek) page.loadingSeek.style.display = 'none';
         if (skillsSeeking.length === 0) {
             page.skillSeekContainer.innerHTML = `<p class="text-gray-500 text-sm">No skills sought yet.</p>`;
         } else {
@@ -105,14 +108,21 @@ function renderProfileSkills(skillsOffering = [], skillsSeeking = []) {
  * Updates the main profile page with data.
  */
 function updateProfilePage(data) {
+    // Check for null/undefined data to prevent errors
+    if (!data) return;
+    
     userProfileData = data; // Store latest data
 
+    // --- Combine Name ---
     if (page.name) page.name.innerText = `${data.firstName || ''} ${data.lastName || ''}`.trim();
-    if (page.email) page.email.innerText = data.email || 'No email found';
-    if (page.bio) page.bio.innerText = data.bio || 'No bio provided';
+    
+    if (page.email) page.email.innerText = data.email || 'N/A';
+    if (page.bio) page.bio.innerText = data.bio || 'No bio provided.';
     
     renderProfileSkills(data.skillsOffering, data.skillsSeeking);
 }
+
+// --- Edit Modal Functions ---
 
 /**
  * Renders the editable skill pills inside the MODAL.
@@ -136,7 +146,6 @@ function renderModalSkills() {
         `).join('');
     }
     
-    // Add event listeners to the new 'x' buttons
     addModalDeleteListeners();
 }
 
@@ -175,13 +184,12 @@ function handleModalSkillDelete(e) {
 function openEditModal() {
     if (!modal.container || !modal.backdrop) return;
 
-    // 1. Pre-fill text inputs
+    // 1. Pre-fill text inputs (Name splitting is crucial here)
     if (modal.fName) modal.fName.value = userProfileData.firstName || '';
     if (modal.lName) modal.lName.value = userProfileData.lastName || '';
     if (modal.bio) modal.bio.value = userProfileData.bio || '';
 
     // 2. Pre-fill skill arrays for the modal
-    // Create deep copies to avoid modifying the main profile state until "Save"
     modalSkillsOffering = [...(userProfileData.skillsOffering || [])];
     modalSkillsSeeking = [...(userProfileData.skillsSeeking || [])];
     
@@ -238,7 +246,6 @@ async function saveProfileChanges() {
     }
 
     // 3. Define the data and paths
-    // We update all fields from the modal, including the skill arrays
     const privateData = { 
         ...userProfileData, // Preserve existing data like email
         firstName: newFirstName, 
@@ -248,7 +255,6 @@ async function saveProfileChanges() {
         skillsSeeking: modalSkillsSeeking
     };
     
-    // Public data only needs name and skills
     const publicData = { 
         firstName: newFirstName, 
         lastName: newLastName,
@@ -260,15 +266,14 @@ async function saveProfileChanges() {
     const publicDocRef = doc(db, `artifacts/${appId}/public/data/user_directory`, currentUserId);
 
     try {
-        // 4. Update both documents
-        // Use setDoc with merge to ensure email isn't overwritten
+        // 4. Update both documents (using setDoc with merge to create if missing)
         await setDoc(privateDocRef, privateData, { merge: true }); 
-        await setDoc(publicDocRef, publicData, { merge: true }); // This will create or update
+        await setDoc(publicDocRef, publicData, { merge: true }); 
 
         // 5. Show success and close
         showEditMessage('Profile updated successfully!', false);
-        // The onSnapshot listener will update the UI automatically.
-        setTimeout(closeEditModal, 1500); // Close after 1.5s
+        // UI is updated automatically by onSnapshot
+        setTimeout(closeEditModal, 1500); 
 
     } catch (error) {
         console.error("Error updating profile: ", error);
@@ -276,8 +281,88 @@ async function saveProfileChanges() {
     }
 }
 
+// --- Delete Account Logic ---
+
+/**
+ * Opens the delete account confirmation modal.
+ */
+function openDeleteModal() {
+    if (page.deleteModal && page.deleteModalBackdrop) {
+        page.deleteModal.classList.remove('hidden');
+        page.deleteModalBackdrop.classList.remove('hidden');
+    }
+}
+
+/**
+ * Closes the delete account confirmation modal.
+ */
+function closeDeleteModal() {
+    if (page.deleteModal && page.deleteModalBackdrop) {
+        page.deleteModal.classList.add('hidden');
+        page.deleteModalBackdrop.classList.add('hidden');
+    }
+}
+
+/**
+ * Executes the account deletion process.
+ */
+async function deleteUserAccount() {
+    if (!currentUserId || !auth.currentUser) return;
+    
+    // Disable button during deletion
+    if (page.confirmDeleteBtn) {
+        page.confirmDeleteBtn.disabled = true;
+        page.confirmDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Deleting...';
+    }
+
+    const user = auth.currentUser;
+    
+    // 1. Define document paths
+    const privateDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile/info`);
+    const publicDocRef = doc(db, `artifacts/${appId}/public/data/user_directory`, currentUserId);
+
+    try {
+        // 2. Delete Firestore Documents (Private and Public) FIRST
+        // This is done before deleting the Auth user, as it often fails first.
+        await deleteDoc(privateDocRef).catch(e => console.warn("Could not delete private doc:", e));
+        await deleteDoc(publicDocRef).catch(e => console.warn("Could not delete public doc:", e));
+        console.log("Firestore documents deletion attempted.");
+
+        // 3. Delete Firebase Auth User
+        // This is the step most likely to throw the "requires-recent-login" error.
+        await deleteUser(user);
+        console.log("Auth user deleted.");
+
+        // 4. Success and Redirect
+        alert("Your account has been permanently deleted. Redirecting...");
+        window.location.href = 'index.html';
+
+    } catch (error) {
+        console.error("Error during account deletion:", error);
+        
+        // Handle the specific error requiring re-authentication
+        if (error.code === 'auth/requires-recent-login') {
+            alert("SECURITY ERROR: Please log out, log in again, and immediately try to delete your account.");
+            // We do NOT call signOut here, as it may interfere with the required re-authentication flow.
+        } else {
+             alert(`Error deleting account: ${error.message}. Please try again later.`);
+        }
+        // Re-enable button on failure
+        if (page.confirmDeleteBtn) {
+            page.confirmDeleteBtn.disabled = false;
+            page.confirmDeleteBtn.innerHTML = 'Yes, Delete Permanently';
+        }
+    }
+}
+
+
 // --- Main Auth Listener ---
 onAuthStateChanged(auth, (user) => {
+    // Select all elements again inside the listener's scope to be safe (though DOMContentLoaded should cover it)
+    const pageName = document.getElementById('loggedUserName');
+    const pageEmail = document.getElementById('loggedUserEmail');
+    const pageBio = document.getElementById('loggedUserBio');
+
     if (user) {
         currentUserId = user.uid;
         authReady = true;
@@ -286,15 +371,35 @@ onAuthStateChanged(auth, (user) => {
         const privateDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile/info`);
         
         onSnapshot(privateDocRef, (docSnap) => {
+            // Check if document exists before trying to access data
             if (docSnap.exists()) {
+                // If data exists, update the page
                 updateProfilePage(docSnap.data());
             } else {
-                console.error("User is authenticated, but no matching document was found.");
-                if (page.name) page.name.innerText = "Profile data not found";
-                if (page.email) page.email.innerText = user.email; // Fallback
+                // If doc is missing but user is logged in (e.g., manual deletion or incomplete signup)
+                console.error("User is authenticated, but no matching document was found in Firestore.");
+                
+                // Set page fields to a fallback state
+                if (pageName) pageName.innerText = "Profile data missing. Edit profile to save.";
+                if (pageEmail) pageEmail.innerText = user.email || 'N/A';
+                if (pageBio) pageBio.innerText = "No profile details found.";
+
+                // Use the update function to set skills to empty arrays
+                updateProfilePage({
+                    firstName: user.email ? user.email.split('@')[0] : 'User', 
+                    lastName: '', 
+                    email: user.email, 
+                    bio: 'Profile document missing. Please edit profile to save your details.', 
+                    skillsOffering: [], 
+                    skillsSeeking: []
+                });
             }
         }, (error) => {
             console.error("Error listening to profile:", error);
+            // Show network error to user
+            if (pageName) pageName.innerText = "Error: Failed to connect to database.";
+            if (pageEmail) pageEmail.innerText = "N/A";
+            if (pageBio) pageBio.innerText = "Please check your connection.";
         });
 
     } else {
@@ -311,16 +416,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (page.logoutBtn) {
         page.logoutBtn.addEventListener('click', () => signOut(auth));
     }
+    
+    // Edit Profile Modal Listeners
     if (page.editProfileBtn) {
         page.editProfileBtn.addEventListener('click', openEditModal);
     }
-    
-    // --- ADDED: Listener for new "Edit Skills" button ---
-    if (page.editSkillsBtn) {
-        page.editSkillsBtn.addEventListener('click', openEditModal);
-    }
-    // --- END ADDED ---
-
     if (modal.closeBtn) {
         modal.closeBtn.addEventListener('click', closeEditModal);
     }
@@ -333,8 +433,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modal.saveBtn) {
         modal.saveBtn.addEventListener('click', saveProfileChanges);
     }
+    
+    // Delete Account Modal Listeners
+    if (page.deleteAccountBtn) {
+        page.deleteAccountBtn.addEventListener('click', openDeleteModal);
+    }
+    if (page.cancelDeleteBtn) {
+        page.cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+    }
+    if (page.deleteModalBackdrop) {
+        page.deleteModalBackdrop.addEventListener('click', closeDeleteModal);
+    }
+    // The confirmDeleteBtn listener is critical
+    if (page.confirmDeleteBtn) {
+        page.confirmDeleteBtn.addEventListener('click', deleteUserAccount);
+    }
 
-    // --- Modal Skill Add Listeners ---
+    // Modal Skill Add Listeners
     if (modal.addSkillOfferBtn) {
         modal.addSkillOfferBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -359,4 +474,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
